@@ -4,6 +4,8 @@ app_publisher = "HAT"
 app_description = "The HAT Group is the integrated powerhouse of hospitality, connecting strategy, talent, media, and industry excellence."
 app_email = "neritan.milaqi@gmail.com"
 app_license = "mit"
+app_logo_url = "/assets/hat/images/hat_icon.png"
+app_home = "/desk/hat"
 
 # Send non-GET requests for this app's endpoints as native `application/json`
 # bodies instead of form-encoded, per-key JSON-stringified values.
@@ -12,18 +14,17 @@ use_json_request_body = True
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "hat",
-# 		"logo": "/assets/hat/logo.png",
-# 		"title": "Hospitality and Tourism Academy",
-# 		"route": "/hat",
-# 		"has_permission": "hat.api.permission.has_app_permission",
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": app_logo_url,
+		"title": app_title,
+		"route": app_home,
+	}
+]
 
 # The dock, the rail down the left of the desk, is a document rather than a hook. Author it in
 # Manage Dock on a developer-mode site and press Export to App, and it is written to
@@ -107,7 +108,8 @@ use_json_request_body = True
 # ------------
 
 # before_install = "hat.install.before_install"
-# after_install = "hat.install.after_install"
+after_install = "hat.install.after_install"
+after_migrate = "hat.install.after_migrate"
 
 # Uninstallation
 # ------------
@@ -303,4 +305,3 @@ require_type_annotated_api_methods = True
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

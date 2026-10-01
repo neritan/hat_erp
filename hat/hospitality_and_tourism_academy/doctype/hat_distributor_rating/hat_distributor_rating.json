@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:HAT-RAT-{YYYY}-{#####}",
+ "creation": "2026-10-01 20:04:29.874924",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "hotel",
+  "distributor",
+  "distributor_name",
+  "order_request",
+  "column_break_1",
+  "rating",
+  "quality",
+  "delivery",
+  "communication",
+  "section_1",
+  "comment"
+ ],
+ "fields": [
+  {
+   "fieldname": "hotel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Hotel",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "distributor",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Distributor",
+   "options": "Supplier",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "distributor.supplier_name",
+   "fieldname": "distributor_name",
+   "fieldtype": "Data",
+   "label": "Distributor Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_request",
+   "fieldtype": "Link",
+   "label": "Order Request",
+   "options": "HAT Order Request"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rating",
+   "fieldtype": "Rating",
+   "in_list_view": 1,
+   "label": "Overall Rating",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quality",
+   "fieldtype": "Rating",
+   "label": "Product / Service Quality"
+  },
+  {
+   "fieldname": "delivery",
+   "fieldtype": "Rating",
+   "label": "Delivery & Punctuality"
+  },
+  {
+   "fieldname": "communication",
+   "fieldtype": "Rating",
+   "label": "Communication"
+  },
+  {
+   "fieldname": "section_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "comment",
+   "fieldtype": "Small Text",
+   "label": "Comment"
+  }
+ ],
+ "grid_page_length": 50,
+ "links": [],
+ "modified": "2026-10-01 20:04:29.874924",
+ "modified_by": "Administrator",
+ "module": "Hospitality and Tourism Academy",
+ "name": "HAT Distributor Rating",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HAT Staff",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Hotel",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Distributor",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "distributor_name"
+}

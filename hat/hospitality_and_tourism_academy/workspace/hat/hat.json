@@ -1,0 +1,94 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"hdr1\", \"type\": \"header\", \"data\": {\"text\": \"\\u003cspan class=\\\"h4\\\"\\u003e\\u003cb\\u003eOverview\\u003c/b\\u003e\\u003c/span\\u003e\", \"col\": 12}}, {\"id\": \"nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Hotels\", \"col\": 4}}, {\"id\": \"nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Distributors\", \"col\": 4}}, {\"id\": \"nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Partnerships\", \"col\": 4}}, {\"id\": \"nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Order Requests\", \"col\": 4}}, {\"id\": \"nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"HAT Commission Earned\", \"col\": 4}}, {\"id\": \"sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr2\", \"type\": \"header\", \"data\": {\"text\": \"\\u003cspan class=\\\"h4\\\"\\u003e\\u003cb\\u003eGo to\\u003c/b\\u003e\\u003c/span\\u003e\", \"col\": 12}}, {\"id\": \"sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Hotels\", \"col\": 4}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Distributors\", \"col\": 4}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Order Requests\", \"col\": 4}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Partnerships\", \"col\": 4}}, {\"id\": \"sc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Distributor Ratings\", \"col\": 4}}, {\"id\": \"sc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Product Categories\", \"col\": 4}}]",
+ "creation": "2026-10-01 20:08:13.443489",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "hotel",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "HAT",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-10-01 20:08:36.946513",
+ "modified_by": "Administrator",
+ "module": "Hospitality and Tourism Academy",
+ "name": "HAT",
+ "number_cards": [
+  {
+   "label": "Hotels",
+   "number_card_name": "Hotels"
+  },
+  {
+   "label": "Distributors",
+   "number_card_name": "Distributors"
+  },
+  {
+   "label": "Active Partnerships",
+   "number_card_name": "Active Partnerships"
+  },
+  {
+   "label": "Open Order Requests",
+   "number_card_name": "Open Order Requests"
+  },
+  {
+   "label": "HAT Commission Earned",
+   "number_card_name": "HAT Commission Earned"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Hotels",
+   "type": "URL",
+   "url": "/desk/customer?customer_group=Hotel"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Distributors",
+   "type": "URL",
+   "url": "/desk/supplier?supplier_group=Distributor"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Order Requests",
+   "link_to": "HAT Order Request",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Partnerships",
+   "link_to": "HAT Partnership",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Distributor Ratings",
+   "link_to": "HAT Distributor Rating",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "Tree",
+   "label": "Product Categories",
+   "link_to": "Item Group",
+   "type": "DocType"
+  }
+ ],
+ "standard": 1,
+ "title": "HAT",
+ "type": "Workspace"
+}

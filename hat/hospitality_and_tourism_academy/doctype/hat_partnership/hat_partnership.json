@@ -1,0 +1,209 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:HAT-PRT-{YYYY}-{#####}",
+ "creation": "2026-10-01 20:04:29.398069",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "distributor",
+  "distributor_name",
+  "hotel",
+  "hotel_name",
+  "column_break_1",
+  "status",
+  "start_date",
+  "end_date",
+  "terms_section",
+  "categories",
+  "discount_percentage",
+  "payment_terms_template",
+  "terms",
+  "commission_section",
+  "commission_type",
+  "column_break_2",
+  "commission_rate",
+  "commission_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "distributor",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Distributor",
+   "options": "Supplier",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "distributor.supplier_name",
+   "fieldname": "distributor_name",
+   "fieldtype": "Data",
+   "label": "Distributor Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "hotel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Hotel",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "hotel.customer_name",
+   "fieldname": "hotel_name",
+   "fieldtype": "Data",
+   "label": "Hotel Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nProposed\nActive\nSuspended\nRejected\nTerminated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "terms_section",
+   "fieldtype": "Section Break",
+   "label": "Terms"
+  },
+  {
+   "fieldname": "categories",
+   "fieldtype": "Table MultiSelect",
+   "label": "Categories Supplied",
+   "options": "HAT Category"
+  },
+  {
+   "fieldname": "discount_percentage",
+   "fieldtype": "Percent",
+   "label": "Agreed Discount for Hotel"
+  },
+  {
+   "fieldname": "payment_terms_template",
+   "fieldtype": "Link",
+   "label": "Payment Terms",
+   "options": "Payment Terms Template"
+  },
+  {
+   "fieldname": "terms",
+   "fieldtype": "Text Editor",
+   "label": "Terms & Conditions"
+  },
+  {
+   "fieldname": "commission_section",
+   "fieldtype": "Section Break",
+   "label": "HAT Commission"
+  },
+  {
+   "default": "Percentage",
+   "fieldname": "commission_type",
+   "fieldtype": "Select",
+   "label": "Commission Type",
+   "options": "Percentage\nFixed Amount per Order\nNone"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.commission_type=='Percentage'",
+   "fieldname": "commission_rate",
+   "fieldtype": "Percent",
+   "label": "Commission Rate"
+  },
+  {
+   "depends_on": "eval:doc.commission_type=='Fixed Amount per Order'",
+   "fieldname": "commission_amount",
+   "fieldtype": "Currency",
+   "label": "Commission per Order"
+  }
+ ],
+ "grid_page_length": 50,
+ "links": [],
+ "modified": "2026-10-01 20:04:29.398069",
+ "modified_by": "Administrator",
+ "module": "Hospitality and Tourism Academy",
+ "name": "HAT Partnership",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HAT Staff",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Hotel",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Distributor",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "distributor_name",
+ "track_changes": 1
+}
