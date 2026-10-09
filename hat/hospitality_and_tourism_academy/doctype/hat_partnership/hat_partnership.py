@@ -76,7 +76,15 @@ def get_active_partnership(distributor, hotel, on_date):
 	for p in frappe.get_all(
 		"HAT Partnership",
 		filters={"distributor": distributor, "hotel": hotel, "status": "Active"},
-		fields=["name", "start_date", "end_date", "commission_type", "commission_rate", "commission_amount"],
+		fields=[
+			"name",
+			"start_date",
+			"end_date",
+			"discount_percentage",
+			"commission_type",
+			"commission_rate",
+			"commission_amount",
+		],
 	):
 		if getdate(p.start_date) <= on_date and (not p.end_date or getdate(p.end_date) >= on_date):
 			return p

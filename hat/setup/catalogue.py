@@ -88,6 +88,15 @@ CATALOGUE = {
 	},
 }
 
+# Short codes for product (Item) codes, e.g. HAT-FB-0001
+CATEGORY_CODES = {
+	"Ushqim & Pije": "FB",
+	"Pajisje Kuzhine, Enë & Shërbim Restoranti": "KT",
+	"Mobilje, Tekstile & Akomodim": "RM",
+	"Teknologji, Harduer & Softuer ERP-POS": "TC",
+	"Shërbime Profesionale, Projektim & Konsulencë": "SV",
+}
+
 # Albania's twelve counties (qarqe), used as delivery coverage areas and hotel regions.
 COUNTIES = [
 	"Berat",

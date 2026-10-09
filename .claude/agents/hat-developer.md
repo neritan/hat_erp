@@ -34,8 +34,40 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 - DocTypes in `hat/hospitality_and_tourism_academy/doctype/`: HAT Partnership, HAT Order Request
   (+ Item), HAT Distributor Rating, HAT Category, HAT Coverage Area. Status fields are driven by
   the workflows (`workflow_state_field = "status"`).
+- **Marketplace** (`docs/specs/marketplace.md`):
+  - **Product = ERPNext `Item`** (shared catalogue, codes `HAT-<FB|KT|RM|TC|SV>-0001` from
+    `next_item_code` + `CATEGORY_CODES` in `hat/setup/catalogue.py`). **`HAT Listing` = one
+    distributor's offer** of a product (`item` required, one per distributor + item; `item_name`,
+    `item_group`, `uom`, `image` fetched from the Item).
+  - `hat_listing.py` API: `get_listing_rate` (public price less partnership discount if the
+    partnership covers the category), `get_user_hotel`, whitelisted `get_price_for_hotel`,
+    `get_distributors_for_region`, `create_product` (distributors add missing products; reuses an
+    Item with the same name), `get_marketplace` (products with all their visible offers, paged),
+    `add_to_order` (appends to the hotel's Draft request with that distributor — the "cart").
+  - Desk page **`hat-marketplace`** (`page/hat_marketplace/`): product cards with every
+    distributor's offer, Best price badge, filters; sidebar *Marketplace* points to it, *Listings*
+    to `HAT Listing`.
+  - Item form shows listings via `override_doctype_dashboards` → `get_item_dashboard`.
+  - Hotels see only published listings of verified distributors: `permission_query_conditions` and
+    `has_permission` hooks in `hooks.py` → `hat_listing.py`. A `has_permission` hook returning
+    `None` **denies**; always return `True` when not restricting.
+  - `HAT Settings` (single) — `default_commission_rate`, used by `HAT Order Request` when there is
+    no active partnership (`commission_type = "HAT Default"`).
+  - `HAT Order Request Item.listing`; `HAT Order Request.validate_listings` (distributor match,
+    minimum qty, Order vs RFQ while Draft) and a warning on *Send* for unavailable listings.
+  - Rating changes also update `HAT Listing.distributor_rating`.
+  - `hat/public/js/hat.bundle.js` (`app_include_js`) — `hat.marketplace.add_to_order` dialog and
+    `price_html`, shared by the listing form and list view (`hat_listing_list.js`). `hat` is an
+    eslint global in `.eslintrc`. Run `bench build --app hat` after changing it.
+- `hat/setup/demo.py` — demo data (19 fictional Albanian distributors, 13 hotels, ~200 products
+  with generated category icons (Lucide SVGs as public `/files/hat-icon-*.svg`, `NAME_ICONS` / `GROUP_ICONS`),
+  as ERPNext Items, ~270 offers incl. competing distributors (`COMPETING_OFFERS`) at Albanian
+  market prices, partnerships, ratings, demo logins). Not run on install;
+  `bench --site X execute hat.setup.demo.create_demo` / `delete_demo`. Keep it in step with
+  DocType changes.
 - Workspace `HAT` (`/desk/hat`) and 5 Number Cards in the module folder.
-- Specs: `docs/specs/connect-mvp.md` describes all of the above and its open questions.
+- Specs: `docs/specs/connect-mvp.md` and `docs/specs/marketplace.md` describe all of the above.
+- Prices are in **ALL** only (`MARKETPLACE_CURRENCY` in `hat_listing.py`); company currency is ALL.
 - `hat/public/images/` — `hat_logo.png` (white text, dark backgrounds), `hat_logo_dark.png`
   (green text, light backgrounds), `hat_icon.png` (square mark).
 - `hat/hospitality_and_tourism_academy/sidebar/hospitality_and_tourism_academy/*.json` — the
@@ -82,6 +114,11 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
      enable it only with the user's consent).
    - Check data/behaviour with `bench --site mysite.localhost execute <dotted.path>` or
      `bench --site mysite.localhost console`.
+   - Acceptance checks without `allow_tests`: a script in the scratchpad that does
+     `frappe.init(site="mysite.localhost", sites_path="."); frappe.connect()`, creates test data,
+     runs each criterion as real users (`frappe.set_user` with Hotel / Distributor users + User
+     Permissions), and ends with `frappe.db.rollback()`. Run it from `sites/` with
+     `../env/bin/python <script>`, then confirm no test records remain.
    - Confirm idempotency: re-running install/migrate must not error or duplicate.
 6. **Report** — what changed (files), how it was verified, what was **not** verified (e.g. not
    checked in a browser), and remaining TODOs.

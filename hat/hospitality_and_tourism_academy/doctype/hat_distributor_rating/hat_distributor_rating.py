@@ -61,11 +61,10 @@ def update_distributor_rating(distributor, exclude=None):
 	if exclude:
 		filters["name"] = ("!=", exclude)
 	ratings = frappe.get_all("HAT Distributor Rating", filters=filters, pluck="rating")
+	average = sum(ratings) / len(ratings) if ratings else 0
 	frappe.db.set_value(
 		"Supplier",
 		distributor,
-		{
-			"hat_average_rating": sum(ratings) / len(ratings) if ratings else 0,
-			"hat_rating_count": len(ratings),
-		},
+		{"hat_average_rating": average, "hat_rating_count": len(ratings)},
 	)
+	frappe.db.set_value("HAT Listing", {"distributor": distributor}, "distributor_rating", average)

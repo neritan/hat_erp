@@ -55,7 +55,8 @@ Active ⇄ Suspended (*Suspend* / *Reactivate*); Active or Suspended → *Termin
 - Hotel must be in customer group *Hotel*; distributor in supplier group *Distributor*.
 - Only one *Active* partnership per distributor–hotel pair.
 - A request picks up the partnership active on its date; commission = total × rate %, or the
-  fixed amount, or 0 when there is no partnership ⚠.
+  fixed amount. Without a partnership, HAT's default rate from *HAT Settings* applies (0 until
+  decided) — changed 2026-10-09, see [marketplace.md](marketplace.md).
 - Every item needs a rate before a request is Quoted/Accepted.
 - Warning (not a block) when the hotel's territory is outside the distributor's coverage.
 - A rating may reference a *Completed* request between the same parties; one rating per request.
@@ -70,10 +71,9 @@ Active ⇄ Suspended (*Suspend* / *Reactivate*); Active or Suspended → *Termin
 - [ ] Checked in the browser as Hotel and Distributor users
 
 ## Open questions
-1. **Portal vs desk** — hotels/distributors currently use the desk with restricted roles. Build
-   a portal (web pages) for them? *Recommend: yes, next phase.*
+1. **Portal vs desk** — *Answered 2026-10-09: desk for now, portal maybe later.*
 2. **Who approves partnerships** — only HAT, or must hotel and distributor accept too?
-3. **Commission model** — per order %, fixed fee, membership subscription, or a mix? Who pays
+3. **Commission model** *(partly answered 2026-10-09: every registered party is a partner and pays commission; rate TBD in HAT Settings)* — per order %, fixed fee, membership subscription, or a mix? Who pays
    (distributor or hotel)? When is it invoiced?
 4. **Price visibility** — may a hotel see other hotels' prices from the same distributor? (Now: no.)
 5. **Directory visibility** — should hotels see all distributor details or only a public profile?

@@ -41,6 +41,7 @@ add_to_apps_screen = [
 # include js, css files in header of desk.html
 # app_include_css = "/assets/hat/css/hat.css"
 # app_include_js = "/assets/hat/js/hat.js"
+app_include_js = "hat.bundle.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/hat/css/hat.css"
@@ -110,6 +111,20 @@ add_to_apps_screen = [
 # before_install = "hat.install.before_install"
 after_install = "hat.install.after_install"
 after_migrate = "hat.install.after_migrate"
+
+boot_session = "hat.boot.boot_session"
+
+permission_query_conditions = {
+	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_permission_query_conditions",
+}
+
+has_permission = {
+	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.has_permission",
+}
+
+override_doctype_dashboards = {
+	"Item": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_item_dashboard",
+}
 
 # Uninstallation
 # ------------

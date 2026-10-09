@@ -18,18 +18,45 @@ connects Distributors with Hotels**, operated by HAT, which earns from the conne
 | Actor | ERPNext record | How they use it |
 |---|---|---|
 | **HAT staff** | System User | Run the platform: onboard and verify parties, manage catalogue & contracts, monitor orders, collect commission |
-| **Distributors** | `Supplier`, Supplier Group = "Distributor" | Portal users: maintain their products/services, coverage, prices; answer RFQs; fulfil orders |
-| **Hotels** (clients) | `Customer`, Customer Group = "Hotel" | Portal users: browse distributors and products, request quotes, order, rate distributors |
+| **Distributors** | `Supplier`, Supplier Group = "Distributor" | Desk users (restricted role): publish marketplace listings, coverage, prices; answer RFQs; fulfil orders |
+| **Hotels** (clients) | `Customer`, Customer Group = "Hotel" | Desk users (restricted role): browse the marketplace, order, request quotes, rate distributors |
+
+All actors use the ERPNext **desk** (decided 2026-10-09). A web portal is "maybe later" — don't
+design for it unless HAT asks.
 
 ### What "connect" means (all confirmed by HAT)
-1. **Directory** — hotels browse distributors and the products/services they offer.
-2. **Ordering** — hotels send orders or requests for quotation to distributors; HAT tracks them.
-3. **Contracts / partnerships** — HAT records which distributor supplies which hotel, on what terms.
-4. **More to be defined together** — treat new ideas as open questions, not assumptions.
+1. **Marketplace** (the core, 2026-10-09) — distributors publish listings of the products and
+   services they have available; hotels browse them and order. See `docs/specs/marketplace.md`.
+2. **Directory** — hotels browse distributors and the products/services they offer.
+3. **Ordering** — hotels send orders or requests for quotation to distributors; HAT tracks them.
+   Marketplace orders feed the same *HAT Order Request* workflow.
+4. **Contracts / partnerships** — HAT records which distributor supplies which hotel, on what terms
+   (discount → partner price, commission terms).
+5. **More to be defined together** — treat new ideas as open questions, not assumptions.
+
+### Marketplace rules confirmed by HAT (2026-10-09)
+- **Product vs offer**: a *product* is an ERPNext `Item` in a shared HAT catalogue; a *listing* is
+  one distributor's offer of that product. **One product can be sold by several distributors**,
+  and the marketplace shows each product with all its distributors side by side.
+- **Distributors add missing products** themselves (deduplicated by name); HAT staff merge duplicates.
+- Listing = one distributor's offer: price per unit (or *Price on Request* for services), minimum
+  order, lead time, **Available / Out of Stock** (no stock quantities). Category and unit come
+  from the product.
+- **No moderation**: listings go live immediately, but only distributors *Verified by HAT* can publish.
+- **Price**: public price; a hotel with an active partnership sees its partner (discounted) price.
+- **Currency**: ALL only for now (EUR later).
+- **Delivery coverage is optional**: all listings are shown to every hotel; hotel and distributor
+  agree delivery between them. Coverage is only a filter / warning, never a block.
 
 ### Revenue
-HAT intends to earn from connections (e.g. commission on orders, membership/subscription fees).
-The exact model is **not decided** — always present options and ask, never assume rates or rules.
+**Every registered hotel and distributor is a HAT partner**, so every order carries HAT
+commission (decided 2026-10-09). Partnership terms apply when one exists; otherwise the default
+rate in *HAT Settings* (0 until decided). The **coefficient is not decided** — nor whether it
+varies by category, distributor or order size, who pays, or when it is invoiced. Always present
+options and ask, never assume rates or rules.
+
+### Future notes from HAT (not yet specified)
+Commission coefficient; price per hotel (beyond partnership discount); EUR; web portal (maybe).
 
 ### Key attributes known so far
 - **Hotels**: geolocation (lat/long, city, region), star rating; others to explore together

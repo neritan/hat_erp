@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "default_commission_rate"
+ ],
+ "fields": [
+  {
+   "fieldname": "default_commission_rate",
+   "fieldtype": "Percent",
+   "label": "Default Commission Rate",
+   "default": "0",
+   "description": "HAT commission on order requests that have no active partnership. Every registered hotel and distributor is a HAT partner; set the rate once HAT decides it."
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Hospitality and Tourism Academy",
+ "name": "HAT Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "HAT Staff",
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
