@@ -13,7 +13,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 | | |
 |---|---|
 | Bench | `/workspace/development/frappe-bench` (run `bench` from here) |
-| App | `apps/hat` — Python package `hat`, own git repo, branch `main` |
+| App | `apps/hat` — Python package `hat`, own git repo (`origin` = github.com/neritan/hat_erp) |
+| Branches | **`dev` = development trunk**; feature branches from `dev` (`feat/...`, `fix/...`) and merge back into `dev`; `main` only receives releases from `dev` |
 | Module | `Hospitality and Tourism Academy` → folder `hat/hospitality_and_tourism_academy/` |
 | Site | `mysite.localhost` (developer_mode = 1), served on port 8000 |
 | Frappe | 17.0.0-dev (develop) — newer than most online docs; **read the source** in `apps/frappe` when unsure |
@@ -59,10 +60,23 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
   - `hat/public/js/hat.bundle.js` (`app_include_js`) — `hat.marketplace.add_to_order` dialog and
     `price_html`, shared by the listing form and list view (`hat_listing_list.js`). `hat` is an
     eslint global in `.eslintrc`. Run `bench build --app hat` after changing it.
+- **Quote Requests** (`docs/specs/quote-requests.md`): `HAT Quote Request` (+ Item) and
+  `HAT Quote` (+ Item); status changes through whitelisted doc methods (`publish`, `close`,
+  `cancel_request`, `get_comparison`, `award`; quote `submit_quote`, `withdraw`), not a Workflow.
+  `hat_quote_request.py` holds matching (`get_matching_distributors`, `get_distributor_groups`),
+  in-app notifications (Notification Log), `make_quote`, `add_to_quote_request`, the hourly
+  `close_expired_requests`, and permission hooks (distributors: matching published requests or
+  ones they quoted; hotels: never draft quotes). Award fields on request lines are permlevel 1
+  (hotel read, HAT write); `award` saves with `ignore_permissions` after `check_permission`.
+  `HATQuote.sync_lines` always rebuilds quote lines from the request (`get_quote_lines`). Award
+  creates one `HAT Order Request` per winner (Draft → `apply_workflow("Send to Distributor")`)
+  with `quote_request` / `quote` links.
+- `hat/boot.py` (`boot_session`) — points the ERPNext apps-screen icon to `/desk/home` (ERPNext's
+  `app_home = "/desk"` is the apps screen itself in Frappe 17).
 - `hat/setup/demo.py` — demo data (19 fictional Albanian distributors, 13 hotels, ~200 products
   with generated category icons (Lucide SVGs as public `/files/hat-icon-*.svg`, `NAME_ICONS` / `GROUP_ICONS`),
   as ERPNext Items, ~270 offers incl. competing distributors (`COMPETING_OFFERS`) at Albanian
-  market prices, partnerships, ratings, demo logins). Not run on install;
+  market prices, partnerships, ratings, 5 quote requests with quotes (one awarded), demo logins). Not run on install;
   `bench --site X execute hat.setup.demo.create_demo` / `delete_demo`. Keep it in step with
   DocType changes.
 - Workspace `HAT` (`/desk/hat`) and 5 Number Cards in the module folder.
@@ -123,7 +137,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 6. **Report** — what changed (files), how it was verified, what was **not** verified (e.g. not
    checked in a browser), and remaining TODOs.
 7. **Commit only when the user asks**, in `apps/hat`, conventional messages
-   (`feat:`, `fix:`, `chore:`).
+   (`feat:`, `fix:`, `chore:`). Work on `dev` or a feature branch from `dev`, never directly on
+   `main`; pull requests target `dev`.
 
 ## Safety
 

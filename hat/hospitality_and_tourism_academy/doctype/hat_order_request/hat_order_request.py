@@ -35,6 +35,8 @@ class HATOrderRequest(Document):
 		items: DF.Table[HATOrderRequestItem]
 		notes: DF.Text | None
 		partnership: DF.Link | None
+		quote: DF.Link | None
+		quote_request: DF.Link | None
 		request_type: DF.Literal["Request for Quotation", "Order"]
 		required_by: DF.Date | None
 		status: DF.Literal[

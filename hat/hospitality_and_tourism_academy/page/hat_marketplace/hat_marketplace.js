@@ -21,6 +21,7 @@ class HATMarketplace {
 		this.page = page;
 		this.page_length = 24;
 		this.offers = {};
+		this.products = {};
 		this.make_filters();
 		this.$body = $(`
 			<div class="hat-marketplace">
@@ -34,6 +35,10 @@ class HATMarketplace {
 		this.$grid.on("click", "[data-add-listing]", (e) => {
 			const offer = this.offers[$(e.currentTarget).attr("data-add-listing")];
 			hat.marketplace.add_to_order(offer, this.hotel || undefined);
+		});
+		this.$grid.on("click", "[data-request-quotes]", (e) => {
+			const product = this.products[$(e.currentTarget).attr("data-request-quotes")];
+			hat.marketplace.request_quotes(product, this.hotel || undefined);
 		});
 		this.$more.on("click", "button", () => this.refresh(true));
 		this.page.set_secondary_action(__("Refresh"), () => this.refresh(), "refresh");
@@ -99,6 +104,7 @@ class HATMarketplace {
 		if (!append) {
 			this.$grid.empty();
 			this.offers = {};
+			this.products = {};
 			this.loaded = 0;
 		}
 		this.loaded += message.products.length;
@@ -130,6 +136,13 @@ class HATMarketplace {
 			? `<img src="${encodeURI(product.image)}" alt="">`
 			: `<span>${esc(frappe.get_abbr(product.item_name))}</span>`;
 		const count = product.offers.length;
+		this.products[product.name] = product;
+		const request_quotes = frappe.model.can_create("HAT Quote Request")
+			? `<button class="btn btn-xs btn-default" data-request-quotes="${esc(product.name)}"
+				title="${__("Ask all distributors of this category for a price")}">${__(
+					"Request Quotes"
+			  )}</button>`
+			: "";
 		return `
 			<div class="hat-mp-card">
 				<div class="hat-mp-head">
@@ -145,6 +158,7 @@ class HATMarketplace {
 				<div class="hat-mp-offers">
 					${product.offers.map((offer) => this.offer_html(offer)).join("")}
 				</div>
+				${request_quotes ? `<div class="hat-mp-footer">${request_quotes}</div>` : ""}
 			</div>`;
 	}
 
@@ -239,6 +253,7 @@ frappe.dom.set_style(`
 	}
 	.hat-mp-rating { color: var(--yellow-600, #d97706); font-size: var(--text-sm); margin-left: 4px; }
 	.hat-mp-price { text-align: right; white-space: nowrap; }
+	.hat-mp-footer { text-align: right; padding-top: var(--padding-xs); }
 	.hat-mp-more { text-align: center; margin-top: var(--margin-md); }
 	.hat-mp-empty { padding: var(--padding-lg); }
 `);

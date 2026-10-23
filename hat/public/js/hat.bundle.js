@@ -72,3 +72,39 @@ hat.marketplace.price_html = (price) => {
 };
 
 hat.marketplace.can_order = () => frappe.model.can_create("HAT Order Request");
+
+// Add a product to the hotel's draft quote request, which all matching distributors see once published
+hat.marketplace.request_quotes = (product, hotel) => {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Request quotes: {0}", [product.item_name]),
+		fields: [
+			{
+				fieldname: "hotel",
+				fieldtype: "Link",
+				label: __("Hotel"),
+				options: "Customer",
+				reqd: 1,
+				default: hotel,
+				hidden: hotel ? 1 : 0,
+				get_query: () => ({ filters: { customer_group: "Hotel" } }),
+			},
+			{ fieldname: "qty", fieldtype: "Float", label: __("Quantity"), reqd: 1, default: 1 },
+		],
+		primary_action_label: __("Add to Quote Request"),
+		primary_action: async ({ hotel, qty }) => {
+			const { message: request } = await frappe.call({
+				method: "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.add_to_quote_request",
+				args: { item: product.name, qty, hotel },
+				freeze: true,
+			});
+			dialog.hide();
+			frappe.show_alert({
+				message: __("Added to {0}. Publish it when your list is ready.", [
+					`<a href="/desk/hat-quote-request/${request}">${request}</a>`,
+				]),
+				indicator: "green",
+			});
+		},
+	});
+	dialog.show();
+};

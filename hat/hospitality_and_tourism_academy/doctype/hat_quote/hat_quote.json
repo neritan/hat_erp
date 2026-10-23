@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "quote_request",
+  "title",
+  "hotel",
+  "hotel_name",
+  "distributor",
+  "distributor_name",
+  "column_break_1",
+  "status",
+  "quote_deadline",
+  "valid_until",
+  "delivery_days",
+  "items_section",
+  "items",
+  "total_amount",
+  "notes_section",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "quote_request",
+   "fieldtype": "Link",
+   "label": "Quote Request",
+   "options": "HAT Quote Request",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Request Title",
+   "fetch_from": "quote_request.title",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "hotel",
+   "fieldtype": "Link",
+   "label": "Hotel",
+   "options": "Customer",
+   "fetch_from": "quote_request.hotel",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "hotel_name",
+   "fieldtype": "Data",
+   "label": "Hotel Name",
+   "fetch_from": "hotel.customer_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "distributor",
+   "fieldtype": "Link",
+   "label": "Distributor",
+   "options": "Supplier",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "distributor_name",
+   "fieldtype": "Data",
+   "label": "Distributor Name",
+   "fetch_from": "distributor.supplier_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nSubmitted\nAwarded\nNot Awarded\nWithdrawn",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "quote_deadline",
+   "fieldtype": "Datetime",
+   "label": "Quotes Due By",
+   "fetch_from": "quote_request.quote_deadline",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valid_until",
+   "fieldtype": "Date",
+   "label": "Prices Valid Until"
+  },
+  {
+   "fieldname": "delivery_days",
+   "fieldtype": "Int",
+   "label": "Delivery Time (Days)"
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Prices"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "HAT Quote Item"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text",
+   "label": "Notes for the Hotel"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Hospitality and Tourism Academy",
+ "name": "HAT Quote",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "role": "HAT Staff",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "role": "Distributor",
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "write": 1
+  },
+  {
+   "role": "Hotel",
+   "print": 1,
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:QT-{YYYY}-{#####}",
+ "naming_rule": "Expression (old style)",
+ "title_field": "distributor_name",
+ "track_changes": 1,
+ "search_fields": "distributor_name,hotel_name,status"
+}

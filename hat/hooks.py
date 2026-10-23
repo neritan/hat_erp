@@ -116,10 +116,20 @@ boot_session = "hat.boot.boot_session"
 
 permission_query_conditions = {
 	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_permission_query_conditions",
+	"HAT Quote Request": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.get_permission_query_conditions",
+	"HAT Quote": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.get_quote_permission_query_conditions",
 }
 
 has_permission = {
 	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.has_permission",
+	"HAT Quote Request": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_permission",
+	"HAT Quote": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_quote_permission",
+}
+
+scheduler_events = {
+	"hourly": [
+		"hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.close_expired_requests"
+	],
 }
 
 override_doctype_dashboards = {
