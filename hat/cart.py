@@ -5,14 +5,14 @@ from frappe import _
 from frappe.model.workflow import apply_workflow
 from frappe.utils import flt
 
-from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import get_user_hotel
+from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import resolve_hotel
 from hat.hospitality_and_tourism_academy.doctype.hat_order_request.hat_order_request import (
 	minimum_order_warning,
 )
 
 
-def resolve_hotel(hotel=None):
-	hotel = hotel or get_user_hotel()
+def resolve_cart_hotel(hotel=None):
+	hotel = resolve_hotel(hotel)
 	if not hotel:
 		frappe.throw(_("Select the hotel whose cart you want to see"))
 	return hotel
@@ -29,21 +29,38 @@ def get_draft_orders(hotel):
 
 @frappe.whitelist()
 def get_cart(hotel: str | None = None) -> dict:
-	hotel = resolve_hotel(hotel)
+	"""The cart in a fixed number of queries, however many distributors and lines it holds."""
+	hotel = resolve_cart_hotel(hotel)
+	# get_list applies the hotel's permissions; the batched reads below only follow these orders
+	orders = frappe.get_list(
+		"HAT Order Request",
+		filters={"hotel": hotel, "status": "Draft"},
+		fields=["name", "distributor", "distributor_name", "request_type", "partnership", "total_amount"],
+		order_by="creation asc",
+	)
+	items = {}
+	for item in frappe.get_all(
+		"HAT Order Request Item",
+		filters={"parent": ("in", [o.name for o in orders] or [""]), "parenttype": "HAT Order Request"},
+		fields=["name", "parent", "listing", "item", "description", "qty", "uom", "rate", "amount"],
+		order_by="idx asc",
+	):
+		items.setdefault(item.parent, []).append(item)
+	listings = by_name(
+		"HAT Listing",
+		{i.listing for rows in items.values() for i in rows if i.listing},
+		["image", "minimum_qty", "availability", "published"],
+	)
+	suppliers = by_name(
+		"Supplier", {o.distributor for o in orders}, ["hat_minimum_order", "hat_average_rating"]
+	)
+
 	parts = []
-	for name in get_draft_orders(hotel):
-		order = frappe.get_doc("HAT Order Request", name)
-		listings = {
-			row.name: row
-			for row in frappe.get_all(
-				"HAT Listing",
-				filters={"name": ("in", [i.listing for i in order.items if i.listing] or [""])},
-				fields=["name", "image", "minimum_qty", "availability", "published"],
-			)
-		}
-		minimum = flt(frappe.db.get_value("Supplier", order.distributor, "hat_minimum_order"))
+	for order in orders:
+		supplier = suppliers.get(order.distributor) or {}
+		minimum = flt(supplier.get("hat_minimum_order"))
 		lines = []
-		for item in order.items:
+		for item in items.get(order.name, []):
 			listing = listings.get(item.listing) or {}
 			lines.append(
 				{
@@ -57,8 +74,13 @@ def get_cart(hotel: str | None = None) -> dict:
 					"amount": item.amount,
 					"image": listing.get("image"),
 					"minimum_qty": listing.get("minimum_qty") or 1,
-					"unavailable": bool(listing)
-					and (not listing.get("published") or listing.get("availability") != "Available"),
+					# a line from a listing that was deleted, unpublished or ran out of stock
+					"unavailable": bool(item.listing)
+					and (
+						not listing
+						or not listing.get("published")
+						or listing.get("availability") != "Available"
+					),
 				}
 			)
 		parts.append(
@@ -66,7 +88,7 @@ def get_cart(hotel: str | None = None) -> dict:
 				"order": order.name,
 				"distributor": order.distributor,
 				"distributor_name": order.distributor_name,
-				"rating": frappe.db.get_value("Supplier", order.distributor, "hat_average_rating"),
+				"rating": supplier.get("hat_average_rating"),
 				"request_type": order.request_type,
 				"partnership": order.partnership,
 				"total": order.total_amount,
@@ -84,9 +106,19 @@ def get_cart(hotel: str | None = None) -> dict:
 	}
 
 
+def by_name(doctype, names, fields):
+	"""{name: row} for these records in one query."""
+	if not names:
+		return {}
+	return {
+		row.name: row
+		for row in frappe.get_all(doctype, filters={"name": ("in", list(names))}, fields=["name", *fields])
+	}
+
+
 @frappe.whitelist()
 def get_cart_count(hotel: str | None = None) -> int:
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	if not hotel:
 		return 0
 	orders = get_draft_orders(hotel)
@@ -128,7 +160,7 @@ def place_order(
 	notes: str | None = None,
 ) -> dict:
 	"""Send the cart's drafts (or only `orders`) to their distributors, each on its own."""
-	hotel = resolve_hotel(hotel)
+	hotel = resolve_cart_hotel(hotel)
 	drafts = get_draft_orders(hotel)
 	selected = [o for o in drafts if not orders or o in orders]
 	if not selected:
@@ -151,17 +183,40 @@ def place_order(
 			warning = minimum_order_warning(doc)
 			if warning:
 				warnings.append(warning)
-		except frappe.ValidationError as e:
+		except Exception as e:
+			# The database undoes the whole transaction on these, savepoint included: fail it all
+			if is_database_failure(e):
+				raise
 			frappe.db.rollback(save_point="hat_place_order")
+			if isinstance(e, frappe.ValidationError | frappe.PermissionError):
+				error = str(e) or _("Could not be sent")
+			else:
+				frappe.log_error(
+					title=_("Placing order {0} failed").format(name),
+					reference_doctype="HAT Order Request",
+					reference_name=name,
+				)
+				error = _("Unexpected error; HAT support can see it in the Error Log")
 			failed.append(
 				{
 					"order": name,
 					"distributor_name": frappe.db.get_value("HAT Order Request", name, "distributor_name"),
-					"error": str(e) or _("Could not be sent"),
+					"error": error,
 				}
 			)
 			frappe.clear_messages()
 	return {"sent": sent, "failed": failed, "warnings": warnings}
+
+
+def is_database_failure(e):
+	return isinstance(
+		e,
+		frappe.QueryDeadlockError
+		| frappe.QueryTimeoutError
+		| frappe.db.OperationalError
+		| frappe.db.InternalError
+		| frappe.db.InterfaceError,
+	)
 
 
 def get_cart_order(name):

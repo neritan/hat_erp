@@ -44,7 +44,10 @@ class HATMarketplace {
 		this.$more.on("click", "button", () => this.refresh(true));
 		this.page.set_secondary_action(__("Refresh"), () => this.refresh(), "refresh");
 		if (frappe.model.can_create("HAT Order Request")) {
-			$(document).on("hat:cart-count", () => this.update_cart_count());
+			// namespaced and unbound first, so a re-created page never stacks handlers
+			$(document)
+				.off("hat:cart-count.hat-marketplace")
+				.on("hat:cart-count.hat-marketplace", () => this.update_cart_count());
 		}
 	}
 

@@ -42,6 +42,9 @@ totals — and to place all its orders in one go (**Place Order**; there is no p
 - [x] Below minimum order → warning, the order is still sent
 - [x] Place Order sends every draft (status Sent) with delivery date, address and notes; *Order only this* sends one
 - [x] A failing distributor part (below listing minimum qty) is reported; the others are still sent
+- [x] Automated: `hat/tests/test_cart.py` (13 tests — shared cart, cross-hotel access, totals/count,
+  quantity and removal, minimum quantity and minimum order, partial failure, unexpected and database
+  errors, single-distributor order, empty cart, unavailable lines, constant query count)
 - [ ] Checked in the browser as a Hotel user
 
 ## Out of scope

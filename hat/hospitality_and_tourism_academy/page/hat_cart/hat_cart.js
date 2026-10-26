@@ -7,7 +7,10 @@ frappe.pages["hat-cart"].on_page_load = (wrapper) => {
 		single_column: true,
 	});
 	wrapper.cart = new HATCart(page);
-	$(document).on("hat:cart-updated", () => wrapper.cart.refresh());
+	// namespaced and unbound first, so a re-created page never stacks handlers
+	$(document)
+		.off("hat:cart-updated.hat-cart")
+		.on("hat:cart-updated.hat-cart", () => wrapper.cart.refresh());
 };
 
 frappe.pages["hat-cart"].on_page_show = (wrapper) => {

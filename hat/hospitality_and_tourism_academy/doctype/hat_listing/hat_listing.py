@@ -115,18 +115,32 @@ def get_user_hotel(user=None):
 	return hotels[0] if len(hotels) == 1 else None
 
 
+def resolve_hotel(hotel=None):
+	"""The hotel to act for: the user's own, or — for HAT staff only — the one they name.
+
+	Never trust a hotel passed from the client: prices, partner discounts and carts are private."""
+	own = get_user_hotel()
+	if not hotel or hotel == own:
+		return own
+	if not set(frappe.get_roles()) & STAFF_ROLES or not frappe.has_permission("Customer", "read", hotel):
+		frappe.throw(_("You can only act for your own hotel"), frappe.PermissionError)
+	if frappe.db.get_value("Customer", hotel, "customer_group") != "Hotel":
+		frappe.throw(_("{0} is not a hotel").format(frappe.bold(hotel)))
+	return hotel
+
+
 @frappe.whitelist()
 def get_price_for_hotel(listing: str, hotel: str | None = None) -> dict:
 	doc = frappe.get_doc("HAT Listing", listing)
 	doc.check_permission("read")
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	return {"hotel": hotel, "rate": get_listing_rate(doc, hotel), "public_price": doc.price}
 
 
 @frappe.whitelist()
 def get_distributors_for_region(hotel: str | None = None) -> list[str]:
 	"""Distributors that list the hotel's territory in their coverage, or list no coverage at all."""
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	territory = hotel and frappe.db.get_value("Customer", hotel, "territory")
 	if not territory:
 		frappe.throw(_("Set the hotel's Territory to filter by delivery region"))
@@ -218,7 +232,7 @@ def get_marketplace(
 	page_length: int = 24,
 ) -> dict:
 	"""Products on the marketplace, each with the offers of every distributor that sells it."""
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	filters = [["published", "=", 1]]
 	if item_group:
 		filters.append(["item_group", "descendants of (inclusive)", item_group])
@@ -279,7 +293,7 @@ def add_to_order(listing: str, qty: float, hotel: str | None = None) -> str:
 		frappe.throw(_("{0} is not published").format(frappe.bold(doc.title)))
 	if doc.availability != "Available":
 		frappe.throw(_("{0} is out of stock").format(frappe.bold(doc.title)))
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	if not hotel:
 		frappe.throw(_("Select the hotel you are ordering for"))
 
