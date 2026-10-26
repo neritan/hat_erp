@@ -71,6 +71,11 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
   `HATQuote.sync_lines` always rebuilds quote lines from the request (`get_quote_lines`). Award
   creates one `HAT Order Request` per winner (Draft → `apply_workflow("Send to Distributor")`)
   with `quote_request` / `quote` links.
+- **Cart** (`docs/specs/hotel-cart.md`): `hat/cart.py` — the hotel's Draft `HAT Order Request`s
+  are the cart (`get_cart`, `get_cart_count`, `update_line`, `remove_line`, `place_order`; each
+  draft sent under its own savepoint so one failure doesn't block the rest). Desk page `hat-cart`;
+  Marketplace shows *Cart (n)*; JS events `hat:cart-count` / `hat:cart-updated`.
+  `minimum_order_warning` lives in `hat_order_request.py` (warn only).
 - `hat/boot.py` (`boot_session`) — points the ERPNext apps-screen icon to `/desk/home` (ERPNext's
   `app_home = "/desk"` is the apps screen itself in Frappe 17).
 - `hat/setup/demo.py` — demo data (19 fictional Albanian distributors, 13 hotels, ~200 products
@@ -113,6 +118,13 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
    the source document.
 6. Match the surrounding code style (tabs, ruff config in `pyproject.toml`); keep comments sparse.
 
+7. **Never trust a hotel (or distributor) passed from the client.** Whitelisted methods that take
+   `hotel` must call `resolve_hotel(hotel)` (`hat_listing.py`): own hotel from the User Permission,
+   another hotel only for HAT Staff / System Manager with read access. Prices, partner discounts
+   and carts are private per hotel.
+8. **`frm.call` with an options object needs `doc: frm.doc`** for document methods; without it
+   Frappe looks for a module-level function (bug fixed in the Compare & Award dialog).
+
 ## Process for each feature
 
 1. **Spec** — confirm a spec exists in `docs/specs/<feature>.md` with no blocking open
@@ -123,7 +135,9 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
    JS/CSS/assets changed, then `bench --site mysite.localhost clear-cache`.
 5. **Verify**:
    - `env/bin/python -m py_compile` on changed files; `cd apps/hat && pre-commit run --files <files>` if available.
-   - Tests: add `test_*.py` next to DocTypes / in `hat/tests/`; run
+   - Tests: add `test_*.py` next to DocTypes / in `hat/tests/` (example: `hat/tests/test_cart.py` —
+     builds its own `_Test HAT …` fixtures in `setUpClass`, one savepoint per test, `unittest.mock.patch`
+     to inject failures; never let a test write a real Error Log). Run
      `bench --site mysite.localhost run-tests --app hat` (needs `allow_tests` in site config;
      enable it only with the user's consent).
    - Check data/behaviour with `bench --site mysite.localhost execute <dotted.path>` or

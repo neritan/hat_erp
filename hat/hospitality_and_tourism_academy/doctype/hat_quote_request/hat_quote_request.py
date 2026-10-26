@@ -10,8 +10,8 @@ from frappe.utils.nestedset import get_ancestors_of, get_descendants_of
 
 from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import (
 	STAFF_ROLES,
-	get_user_hotel,
 	is_hotel_only,
+	resolve_hotel,
 )
 from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
 	validate_party_group,
@@ -352,7 +352,7 @@ def make_quote(quote_request: str, distributor: str | None = None) -> str:
 @frappe.whitelist(methods=["POST"])
 def add_to_quote_request(item: str, qty: float, hotel: str | None = None) -> str:
 	"""Add a product to the hotel's draft quote request, creating it if needed."""
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	if not hotel:
 		frappe.throw(_("Select the hotel you are asking for"))
 	draft = frappe.get_list(

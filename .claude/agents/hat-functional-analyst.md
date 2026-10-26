@@ -57,6 +57,11 @@ design for it unless HAT asks.
   commission and ratings work as for marketplace orders.
 - Open questions: show quotes only after the deadline? email notifications? quote count visible to distributors?
 
+### Hotel cart confirmed by HAT (2026-10-23)
+- The cart is the hotel's Draft order requests (one per distributor), **shared by all users of the hotel**.
+- A distributor's *Minimum Order* only **warns**; **Place Order** sends to all distributors at once (no payment/checkout yet). See
+  `docs/specs/hotel-cart.md`.
+
 ### Revenue
 **Every registered hotel and distributor is a HAT partner**, so every order carries HAT
 commission (decided 2026-10-09). Partnership terms apply when one exists; otherwise the default

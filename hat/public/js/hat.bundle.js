@@ -9,7 +9,7 @@ hat.marketplace.add_to_order = async (listing, hotel) => {
 		hotel,
 	});
 	const dialog = new frappe.ui.Dialog({
-		title: __("Add {0} to Order", [listing.title]),
+		title: __("Add {0} to Cart", [listing.title]),
 		fields: [
 			{
 				fieldname: "hotel",
@@ -36,7 +36,7 @@ hat.marketplace.add_to_order = async (listing, hotel) => {
 				options: hat.marketplace.price_html(price),
 			},
 		],
-		primary_action_label: __("Add to Order"),
+		primary_action_label: __("Add to Cart"),
 		primary_action: async ({ hotel, qty }) => {
 			const { message: order } = await frappe.call({
 				method: `${LISTING_API}.add_to_order`,
@@ -45,11 +45,14 @@ hat.marketplace.add_to_order = async (listing, hotel) => {
 			});
 			dialog.hide();
 			frappe.show_alert({
-				message: __("Added to {0}", [
+				message: __("Added to the cart ({0}). {1}", [
 					`<a href="/desk/hat-order-request/${order}">${order}</a>`,
+					`<a href="/desk/hat-cart">${__("View cart")}</a>`,
 				]),
 				indicator: "green",
 			});
+			$(document).trigger("hat:cart-count");
+			$(document).trigger("hat:cart-updated");
 		},
 	});
 	dialog.show();
