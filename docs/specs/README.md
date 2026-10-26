@@ -6,6 +6,7 @@
 | Connect MVP: directory, order requests, partnerships, ratings | [connect-mvp.md](connect-mvp.md) | built — awaiting HAT review |
 | Marketplace: distributor listings, hotel ordering | [marketplace.md](marketplace.md) | built — awaiting HAT review |
 | Quote Requests: hotels ask, distributors send sealed quotes, award per line | [quote-requests.md](quote-requests.md) | built — awaiting HAT review |
+| Hotel Cart: review marketplace orders by distributor, place them in one go | [hotel-cart.md](hotel-cart.md) | built on `feat/hotel-cart` — awaiting HAT review |
 
 ## Decisions log
 | Date | Decision |
@@ -23,3 +24,4 @@
 | 2026-10-09 | Marketplace shows products (ERPNext Item); one product can be offered by several distributors (HAT Listing = offer) |
 | 2026-10-09 | Distributors can add missing products themselves; HAT staff merge duplicates |
 | 2026-10-09 | Quote Requests: visible to verified distributors with matching categories; quotes sealed; award per product line; hotel name visible |
+| 2026-10-23 | Hotel cart: shared per hotel; distributor minimum order only warns; Place Order sends to all distributors at once (plus *Order only this*) |

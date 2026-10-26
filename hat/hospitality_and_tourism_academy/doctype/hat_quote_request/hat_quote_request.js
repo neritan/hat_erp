@@ -145,6 +145,7 @@ async function compare_and_award(frm) {
 			}
 			const { message: orders } = await frm.call({
 				method: "award",
+				doc: frm.doc,
 				args: { awards },
 				freeze: true,
 				freeze_message: __("Sending orders..."),

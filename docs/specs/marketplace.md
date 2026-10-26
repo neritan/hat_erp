@@ -27,7 +27,7 @@ commission and ratings work as today.
 |---|---|---|
 | HAT staff | all listings (published or not) | everything; unpublish any listing; verify distributors |
 | Distributor | own listings | create, edit, publish/unpublish, mark Available / Out of Stock |
-| Hotel | published listings of all distributors (read-only) | filter/search, *Add to Order*, send orders (existing workflow) |
+| Hotel | published listings of all distributors (read-only) | filter/search, *Add to Cart*, check out (see hotel-cart.md) (existing workflow) |
 
 "Own" listings are enforced by the existing User Permission on `Supplier`.
 
@@ -90,15 +90,18 @@ commission and ratings work as today.
    **Best price** badge when several distributors offer it. Filters: search (product, offer or
    distributor name), category (incl. sub-groups), *Available only*, optional *Delivers to my
    region*. 24 products per page, *Load more*. HAT staff pick a hotel to see its prices.
-2. On a distributor's row the hotel clicks **Add to Order** (or **Request Quote** when priced on
-   request) and enters a quantity. The **Listings** list (`HAT Listing`) keeps the same button for
-   distributors and HAT staff managing offers.
-3. The system adds the line to the hotel's **Draft** `HAT Order Request` for that distributor, creating it if none exists. One draft per hotel–distributor = one "cart" per distributor.
-4. Hotel reviews the draft and runs **Send to Distributor** — from here the existing workflow applies (Sent → Accepted/Quoted → Delivered → Completed → rating).
+2. On a distributor's row the hotel clicks **Add to Cart** (also for offers priced on request,
+   which go out as a request for quotation) and enters a quantity. The **Listings** list
+   (`HAT Listing`) has the same button for distributors and HAT staff managing offers.
+3. The line goes into the hotel's **Draft** `HAT Order Request` for that distributor, created if
+   none exists. Together these drafts are the hotel's **Cart** (see [hotel-cart.md](hotel-cart.md)).
+4. In the cart the hotel reviews everything and clicks **Place Order**, which sends each draft to its
+   distributor; from there the existing workflow applies (Sent → Accepted/Quoted → Delivered →
+   Completed → rating).
 
 ## Rules
 - Only published listings of Verified distributors are visible to hotels; unverifying a distributor hides its listings.
-- *Out of Stock* listings stay visible but **Add to Order** is blocked.
+- *Out of Stock* listings stay visible but **Add to Cart** is blocked.
 - Quantity must be ≥ `minimum_qty`, and a listing must belong to the request's distributor (checked while Draft).
 - **Price shown / rate used** = listing `price`, or `price × (1 − discount_percentage)` when the hotel has an *Active* partnership with that distributor that covers the listing's category (or has no categories set).
 - Rate is copied when the line is added; later price changes do not affect existing lines. The distributor can still adjust when quoting.

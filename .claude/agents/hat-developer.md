@@ -71,6 +71,11 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
   `HATQuote.sync_lines` always rebuilds quote lines from the request (`get_quote_lines`). Award
   creates one `HAT Order Request` per winner (Draft → `apply_workflow("Send to Distributor")`)
   with `quote_request` / `quote` links.
+- **Cart** (`docs/specs/hotel-cart.md`): `hat/cart.py` — the hotel's Draft `HAT Order Request`s
+  are the cart (`get_cart`, `get_cart_count`, `update_line`, `remove_line`, `place_order`; each
+  draft sent under its own savepoint so one failure doesn't block the rest). Desk page `hat-cart`;
+  Marketplace shows *Cart (n)*; JS events `hat:cart-count` / `hat:cart-updated`.
+  `minimum_order_warning` lives in `hat_order_request.py` (warn only).
 - `hat/boot.py` (`boot_session`) — points the ERPNext apps-screen icon to `/desk/home` (ERPNext's
   `app_home = "/desk"` is the apps screen itself in Frappe 17).
 - `hat/setup/demo.py` — demo data (19 fictional Albanian distributors, 13 hotels, ~200 products

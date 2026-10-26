@@ -11,6 +11,7 @@ frappe.pages["hat-marketplace"].on_page_load = (wrapper) => {
 
 frappe.pages["hat-marketplace"].on_page_show = (wrapper) => {
 	wrapper.marketplace.refresh();
+	wrapper.marketplace.update_cart_count();
 };
 
 const MARKETPLACE_API = "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing";
@@ -42,6 +43,21 @@ class HATMarketplace {
 		});
 		this.$more.on("click", "button", () => this.refresh(true));
 		this.page.set_secondary_action(__("Refresh"), () => this.refresh(), "refresh");
+		if (frappe.model.can_create("HAT Order Request")) {
+			$(document).on("hat:cart-count", () => this.update_cart_count());
+		}
+	}
+
+	async update_cart_count() {
+		if (!frappe.model.can_create("HAT Order Request")) return;
+		const { message: count } = await frappe.call("hat.cart.get_cart_count", {
+			hotel: this.hotel_field?.get_value() || null,
+		});
+		this.page.set_primary_action(
+			count ? __("Cart ({0})", [count]) : __("Cart"),
+			() => frappe.set_route("hat-cart"),
+			"shopping-cart"
+		);
 	}
 
 	make_filters() {
@@ -67,7 +83,10 @@ class HATMarketplace {
 				options: "Customer",
 				label: __("Prices for hotel"),
 				get_query: () => ({ filters: { customer_group: "Hotel" } }),
-				change: refresh,
+				change: () => {
+					refresh();
+					this.update_cart_count();
+				},
 			});
 		}
 		this.available_only = this.page.add_field({
@@ -179,7 +198,7 @@ class HATMarketplace {
 			action = `<span class="indicator-pill red">${__("Out of Stock")}</span>`;
 		} else if (hat.marketplace.can_order()) {
 			action = `<button class="btn btn-xs btn-primary" data-add-listing="${esc(offer.name)}">
-				${offer.rate === null ? __("Request Quote") : __("Add to Order")}</button>`;
+				${__("Add to Cart")}</button>`;
 		} else {
 			action = "";
 		}

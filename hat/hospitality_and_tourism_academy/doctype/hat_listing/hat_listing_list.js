@@ -20,8 +20,8 @@ frappe.listview_settings["HAT Listing"] = {
 	button: {
 		show: (doc) =>
 			doc.published && doc.availability === "Available" && hat.marketplace.can_order(),
-		get_label: () => __("Add to Order"),
-		get_description: (doc) => __("Add {0} to your order", [doc.title]),
+		get_label: () => __("Add to Cart"),
+		get_description: (doc) => __("Add {0} to your cart", [doc.title]),
 		action: (doc) => hat.marketplace.add_to_order(doc),
 	},
 };
