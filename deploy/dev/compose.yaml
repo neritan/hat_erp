@@ -1,0 +1,146 @@
+# HAT dev environment (ERPNext + HAT) — single host, Docker Compose.
+#
+#   cd deploy/dev
+#   cp .env.example .env        # then edit passwords / site name
+#   docker compose up -d --build
+#
+# Open http://<host>:${HTTP_PORT}  (user: Administrator, password: ADMIN_PASSWORD)
+
+name: hat-dev
+
+x-hat-image: &hat_image
+  image: ${HAT_IMAGE:-neritan/hat:dev}
+  build:
+    context: ../..
+    args:
+      ERPNEXT_VERSION: ${ERPNEXT_VERSION:-v16.37.0}
+  restart: unless-stopped
+
+x-backend: &backend
+  <<: *hat_image
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+  depends_on:
+    configurator:
+      condition: service_completed_successfully
+
+services:
+  # Writes common_site_config.json (DB / Redis hosts), then exits.
+  configurator:
+    <<: *backend
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_started
+      redis-queue:
+        condition: service_started
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host db;
+        bench set-config -gp db_port 3306;
+        bench set-config -g redis_cache redis://redis-cache:6379;
+        bench set-config -g redis_queue redis://redis-queue:6379;
+        bench set-config -g redis_socketio redis://redis-queue:6379;
+        bench set-config -gp socketio_port 9000;
+
+  # Creates the site with ERPNext + HAT on first run; migrates it on every later run.
+  create-site:
+    <<: *backend
+    restart: "no"
+    environment:
+      SITE_NAME: ${SITE_NAME:-hat.localhost}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -e
+        wait-for-it -t 120 db:3306
+        wait-for-it -t 120 redis-cache:6379
+        wait-for-it -t 120 redis-queue:6379
+        if [ -d "sites/$$SITE_NAME" ]; then
+          bench --site "$$SITE_NAME" migrate
+        else
+          bench new-site "$$SITE_NAME" \
+            --mariadb-user-host-login-scope='%' \
+            --db-root-username=root \
+            --db-root-password="$$DB_ROOT_PASSWORD" \
+            --admin-password="$$ADMIN_PASSWORD" \
+            --install-app erpnext \
+            --install-app hat \
+            --set-default
+        fi
+
+  backend:
+    <<: *backend
+
+  frontend:
+    <<: *backend
+    command: nginx-entrypoint.sh
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${SITE_NAME:-hat.localhost}
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on:
+      - backend
+      - websocket
+
+  websocket:
+    <<: *backend
+    command: node /home/frappe/frappe-bench/apps/frappe/socketio.js
+
+  queue-short:
+    <<: *backend
+    command: bench worker --queue short,default
+
+  queue-long:
+    <<: *backend
+    command: bench worker --queue long,default,short
+
+  scheduler:
+    <<: *backend
+    command: bench schedule
+
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      retries: 20
+    volumes:
+      - db-data:/var/lib/mysql
+
+  redis-cache:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+
+  redis-queue:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-queue-data:/data
+
+volumes:
+  db-data:
+  redis-queue-data:
+  sites:
+  logs:

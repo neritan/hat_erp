@@ -1,0 +1,111 @@
+# Build the HAT image and deploy it to the Hetzner dev server on every push (merge) to `dev`.
+# One-time setup (server, secrets): deploy/hetzner/README.md
+name: Deploy dev
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  ERPNEXT_VERSION: v16.37.0
+  # Docker Hub repository. DOCKERHUB_USERNAME / DOCKERHUB_TOKEN are repository secrets.
+  IMAGE: neritan/hat
+
+jobs:
+  build:
+    # The Hetzner dev server is x86_64. For an Arm (CAX) server use ubuntu-24.04-arm and linux/arm64.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: ERPNEXT_VERSION=${{ env.ERPNEXT_VERSION }}
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:dev
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: dev
+      url: ${{ vars.DEV_URL }}
+    env:
+      HAT_IMAGE: neritan/hat:${{ github.sha }}
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/opt/hat-dev' }}
+      TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Copy compose file
+        run: scp deploy/dev/compose.yaml "$TARGET:$DEPLOY_DIR/compose.yaml"
+
+      - name: Pull, migrate and restart
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          # Values go through stdin (not the ssh command line), so the token never shows in `ps`.
+          {
+            printf 'HAT_IMAGE=%q DEPLOY_DIR=%q DOCKERHUB_USERNAME=%q DOCKERHUB_TOKEN=%q\n' \
+              "$HAT_IMAGE" "$DEPLOY_DIR" "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN"
+            # One { } block: bash reads the whole script before running it, so no command can eat stdin.
+            cat <<'EOF'
+          {
+          set -euo pipefail
+          cd "$DEPLOY_DIR"
+          # Login so private repositories work too; logged out again at the end.
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          # Pin the image in .env so a manual `docker compose up` or a reboot keeps this version.
+          sed -i '/^HAT_IMAGE=/d' .env && echo "HAT_IMAGE=$HAT_IMAGE" >> .env
+          docker compose pull --quiet
+          docker compose up -d --no-build --remove-orphans
+          # create-site creates the site on first run and runs `bench migrate` afterwards.
+          docker compose wait create-site >/dev/null || true
+          code=$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -aq create-site)")
+          docker compose logs --no-log-prefix --tail 50 create-site
+          docker logout
+          if [ "$code" != "0" ]; then echo "create-site failed (exit $code)"; exit 1; fi
+          docker compose restart backend queue-short queue-long scheduler websocket
+          docker image prune -f
+          }
+          EOF
+          } | ssh "$TARGET" bash -s
+
+      - name: Smoke test
+        if: vars.DEV_URL != ''
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /dev/null "${{ vars.DEV_URL }}/api/method/ping"; then echo ok; exit 0; fi
+            sleep 5
+          done
+          echo "dev site not answering at ${{ vars.DEV_URL }}"; exit 1
