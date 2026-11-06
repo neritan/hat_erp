@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.vscode
+.idea
+.ruff_cache
+**/__pycache__
+**/*.pyc
+**/node_modules
+*.egg-info
+docs
+deploy
+*.doc
+Dockerfile
+.dockerignore
