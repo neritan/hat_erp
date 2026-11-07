@@ -21,6 +21,14 @@ WORKDIR /home/frappe/frappe-bench
 COPY --chown=frappe:frappe . apps/hat
 
 # Install the app into the bench virtualenv, register it, and build its assets.
+# The base image keeps built assets in /home/frappe/frappe-bench/assets and its entrypoint links
+# sites/assets to that folder on every start (sites/ is a volume). Build HAT through the same link,
+# so hat.bundle.js and /assets/hat/... land in the baked folder next to frappe and erpnext.
 RUN env/bin/pip install --no-cache-dir -e apps/hat \
     && ls -1 apps > sites/apps.txt \
-    && bench build --app hat
+    && rm -rf sites/assets \
+    && ln -s /home/frappe/frappe-bench/assets sites/assets \
+    && bench build --app hat \
+    && test -e /home/frappe/frappe-bench/assets/hat/images/hat_icon.png \
+    && grep -q '"hat.bundle.js"' /home/frappe/frappe-bench/assets/assets.json \
+    && grep -q '"desk.bundle.js"' /home/frappe/frappe-bench/assets/assets.json

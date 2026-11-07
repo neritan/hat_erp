@@ -92,6 +92,17 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 - `hat/hospitality_and_tourism_academy/sidebar/hospitality_and_tourism_academy/*.json` — the
   module's `Sidebar` document (Frappe 17 format, synced on migrate): *Hotels* = Customer filtered
   by group Hotel, *Distributors* = Supplier filtered by group Distributor.
+- `hat/workspace_sidebar/hat.json` — the same sidebar as a Frappe 16 `Workspace Sidebar` named
+  **HAT** (the dev server runs the official ERPNext v16 image, Frappe 16; it ignores the Frappe 17
+  file and Frappe 17 ignores this one). **Change both files together**;
+  `hat/tests/test_sidebar_sync.py` fails if their entries differ. Frappe 16 draws the sidebar
+  header from the Desktop Icon `HAT` (`hat/desktop_icon/hat.json`, `logo_url` = the app logo).
+- `Dockerfile`: the base image bakes assets into `/home/frappe/frappe-bench/assets` and links
+  `sites/assets` to it on start, so HAT is built through that link. Don't build into `sites/assets`
+  directly, or `/assets/hat/...` 404s on the server.
+- **Dev server** (Hetzner, `deploy/hetzner/README.md`): every merge to `dev` builds `neritan/hat`
+  (Docker Hub) on frappe/erpnext v16 and deploys it via `.github/workflows/deploy-dev.yml`.
+  Local bench = Frappe 17 develop, server = Frappe 16: check Frappe-version-specific features there.
 
 ## Rules
 
