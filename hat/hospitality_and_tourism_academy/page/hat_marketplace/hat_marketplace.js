@@ -37,6 +37,12 @@ class HATMarketplace {
 			const offer = this.offers[$(e.currentTarget).attr("data-add-listing")];
 			hat.marketplace.add_to_order(offer, this.hotel || undefined);
 		});
+		// clicking a distributor's name filters the marketplace to that distributor
+		this.$grid.on("click", "[data-filter-distributor]", (e) => {
+			e.preventDefault();
+			this.distributor.set_value($(e.currentTarget).attr("data-filter-distributor"));
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		});
 		this.$grid.on("click", "[data-request-quotes]", (e) => {
 			const product = this.products[$(e.currentTarget).attr("data-request-quotes")];
 			hat.marketplace.request_quotes(product, this.hotel || undefined);
@@ -68,7 +74,7 @@ class HATMarketplace {
 		this.search = this.page.add_field({
 			fieldname: "search",
 			fieldtype: "Data",
-			label: __("Search product or distributor"),
+			label: __("Search product"),
 			change: refresh,
 		});
 		this.search.$input.on("input", refresh);
@@ -77,6 +83,14 @@ class HATMarketplace {
 			fieldtype: "Link",
 			options: "Item Group",
 			label: __("Category"),
+			change: refresh,
+		});
+		this.distributor = this.page.add_field({
+			fieldname: "distributor",
+			fieldtype: "Link",
+			options: "Supplier",
+			label: __("Distributor"),
+			get_query: () => ({ filters: { supplier_group: "Distributor", hat_verified: 1 } }),
 			change: refresh,
 		});
 		if (is_staff()) {
@@ -115,6 +129,7 @@ class HATMarketplace {
 			args: {
 				search: this.search.get_value() || null,
 				item_group: this.item_group.get_value() || null,
+				distributor: this.distributor.get_value() || null,
 				hotel: this.hotel_field?.get_value() || null,
 				available_only: this.available_only.get_value() ? 1 : 0,
 				in_my_region: this.in_my_region?.get_value() ? 1 : 0,
@@ -208,7 +223,16 @@ class HATMarketplace {
 		return `
 			<div class="hat-mp-offer">
 				<div class="hat-mp-distributor">
-					<a href="/desk/hat-listing/${encodeURIComponent(offer.name)}">${esc(offer.distributor_name)}</a>
+					<a href="#" data-filter-distributor="${esc(offer.distributor)}"
+						title="${esc(__("Show only {0}'s products", [offer.distributor_name]))}">${esc(
+			offer.distributor_name
+		)}</a>
+					<a class="hat-mp-offer-link text-muted" href="/desk/hat-listing/${encodeURIComponent(
+						offer.name
+					)}" title="${esc(__("Offer details"))}">${frappe.utils.icon(
+			"external-link",
+			"xs"
+		)}</a>
 					${rating}
 					${offer.best_price ? `<span class="indicator-pill green">${__("Best price")}</span>` : ""}
 					<div class="text-muted small">${esc(details)}</div>
@@ -225,6 +249,24 @@ class HATMarketplace {
 		const unit = `<span class="text-muted small"> / ${frappe.utils.escape_html(
 			__(offer.uom)
 		)}</span>`;
+		if (offer.tiers && offer.tiers.length) {
+			const lowest = Math.min(...offer.tiers.map((t) => t.rate));
+			const ranges = offer.tiers
+				.map(
+					(t, i) =>
+						`${hat.marketplace.tier_label(offer.tiers, i)}: ${format_currency(
+							t.rate,
+							"ALL",
+							0
+						)}`
+				)
+				.join("<br>");
+			return `<span class="text-muted small">${__("from")}</span> <b>${format_currency(
+				lowest,
+				"ALL",
+				0
+			)}</b>${unit}<div class="text-muted small hat-mp-tiers">${ranges}</div>`;
+		}
 		const rate = `<b>${format_currency(offer.rate, "ALL", 0)}</b>${unit}`;
 		if (offer.rate < offer.price) {
 			return `${rate}<div class="text-muted small"><s>${format_currency(

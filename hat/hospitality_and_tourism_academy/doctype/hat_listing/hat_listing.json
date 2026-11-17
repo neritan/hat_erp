@@ -25,6 +25,8 @@
   "uom",
   "minimum_qty",
   "lead_time_days",
+  "price_tiers_section",
+  "price_tiers",
   "description_section",
   "description"
  ],
@@ -131,7 +133,7 @@
    "fieldname": "price_type",
    "fieldtype": "Select",
    "label": "Price Type",
-   "options": "Fixed Price\nPrice on Request",
+   "options": "Fixed Price\nPrice on Request\nPrice on Quantity",
    "default": "Fixed Price",
    "reqd": 1,
    "in_standard_filter": 1
@@ -141,10 +143,11 @@
    "fieldtype": "Currency",
    "label": "Price",
    "options": "currency",
-   "depends_on": "eval:doc.price_type=='Fixed Price'",
+   "depends_on": "eval:doc.price_type!='Price on Request'",
    "mandatory_depends_on": "eval:doc.price_type=='Fixed Price'",
    "in_list_view": 1,
-   "description": "Public price per unit. Hotels with a partnership see their discounted price."
+   "description": "Public price per unit. Hotels with a partnership see their discounted price. With Price on Quantity: the first range's price.",
+   "read_only_depends_on": "eval:doc.price_type=='Price on Quantity'"
   },
   {
    "fieldname": "currency",
@@ -171,12 +174,28 @@
    "fieldname": "minimum_qty",
    "fieldtype": "Float",
    "label": "Minimum Order Quantity",
-   "default": "1"
+   "default": "1",
+   "read_only_depends_on": "eval:doc.price_type=='Price on Quantity'",
+   "description": "With Price on Quantity: the first range's From Quantity."
   },
   {
    "fieldname": "lead_time_days",
    "fieldtype": "Int",
    "label": "Delivery Lead Time (Days)"
+  },
+  {
+   "fieldname": "price_tiers_section",
+   "fieldtype": "Section Break",
+   "depends_on": "eval:doc.price_type=='Price on Quantity'"
+  },
+  {
+   "fieldname": "price_tiers",
+   "fieldtype": "Table",
+   "label": "Price by Quantity",
+   "options": "HAT Listing Price Tier",
+   "depends_on": "eval:doc.price_type=='Price on Quantity'",
+   "mandatory_depends_on": "eval:doc.price_type=='Price on Quantity'",
+   "description": "One row per quantity range: the price applies from its From Quantity up to the next row's. The whole ordered quantity gets the price of its range."
   },
   {
    "fieldname": "description_section",
@@ -191,7 +210,7 @@
  ],
  "image_field": "image",
  "links": [],
- "modified": "2026-10-09 16:00:00.000000",
+ "modified": "2026-11-16 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
  "name": "HAT Listing",

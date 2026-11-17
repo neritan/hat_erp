@@ -68,7 +68,10 @@ class HATOrderRequest(Document):
 	def validate_listings(self):
 		"""Marketplace lines: listing must belong to the distributor and meet its minimum quantity.
 
-		A request made only of listings is an Order, or a Request for Quotation if any is priced on request."""
+		A request made only of listings is an Order, or a Request for Quotation if any is priced on request.
+		Price on Quantity lines are re-priced from their quantity."""
+		from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import get_listing_rate
+
 		price_types = set()
 		for item in self.items:
 			if not item.listing:
@@ -76,9 +79,11 @@ class HATOrderRequest(Document):
 			listing = frappe.db.get_value(
 				"HAT Listing",
 				item.listing,
-				["title", "distributor", "minimum_qty", "price_type"],
+				["name", "title", "distributor", "minimum_qty", "price_type", "price", "item_group"],
 				as_dict=True,
 			)
+			if listing.price_type == "Price on Quantity":
+				item.rate = get_listing_rate(listing, self.hotel, self.transaction_date, flt(item.qty))
 			if listing.distributor != self.distributor:
 				frappe.throw(
 					_("Row {0}: {1} is not a listing of {2}").format(

@@ -87,9 +87,10 @@ commission and ratings work as today.
    of **product cards**. Each card lists every distributor selling the product, cheapest available
    first, with: distributor (link to the offer) and rating, price for this hotel (partner price
    with the public price struck through), minimum order and unit, lead time, availability, and a
-   **Best price** badge when several distributors offer it. Filters: search (product, offer or
-   distributor name), category (incl. sub-groups), *Available only*, optional *Delivers to my
-   region*. 24 products per page, *Load more*. HAT staff pick a hotel to see its prices.
+   **Best price** badge when several distributors offer it. Filters: search (product name or
+   code only), category (incl. sub-groups), distributor (verified ones; shows only that
+   distributor's offers; clicking a distributor's name on a card sets it, the icon next to the name
+   opens the offer), *Available only*, optional *Delivers to my region*. 24 products per page, *Load more*. HAT staff pick a hotel to see its prices.
 2. On a distributor's row the hotel clicks **Add to Cart** (also for offers priced on request,
    which go out as a request for quotation) and enters a quantity. The **Listings** list
    (`HAT Listing`) has the same button for distributors and HAT staff managing offers.

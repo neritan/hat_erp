@@ -24,7 +24,10 @@ frappe.ui.form.on("HAT Listing", {
 			)
 			.then(({ message }) => {
 				if (message.hotel) {
-					frm.set_intro(hat.marketplace.price_html(message), "blue");
+					frm.set_intro(
+						hat.marketplace.price_html(message, undefined, frm.doc.uom),
+						"blue"
+					);
 				}
 			});
 	},

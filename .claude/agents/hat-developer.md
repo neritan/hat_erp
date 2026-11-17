@@ -56,6 +56,12 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
     no active partnership (`commission_type = "HAT Default"`).
   - `HAT Order Request Item.listing`; `HAT Order Request.validate_listings` (distributor match,
     minimum qty, Order vs RFQ while Draft) and a warning on *Send* for unavailable listings.
+  - **Price on Quantity** (`docs/specs/quantity-pricing.md`): third `price_type` with child table
+    `HAT Listing Price Tier` (`from_qty`, `price`). The whole quantity gets its range's price,
+    partnership discount on top: `get_listing_rate(listing, hotel, on_date, qty)`,
+    `get_tier_rates`, `tier_price`. The first range sets `price` and `minimum_qty`. Draft order
+    requests re-price these lines on save. JS helpers `hat.marketplace.tier_for` / `tier_label` /
+    `tiers_html` in `hat.bundle.js`. Tests: `hat/tests/test_quantity_pricing.py`.
   - Rating changes also update `HAT Listing.distributor_rating`.
   - `hat/public/js/hat.bundle.js` (`app_include_js`) — `hat.marketplace.add_to_order` dialog and
     `price_html`, shared by the listing form and list view (`hat_listing_list.js`). `hat` is an

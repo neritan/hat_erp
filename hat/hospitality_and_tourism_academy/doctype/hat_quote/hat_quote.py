@@ -145,17 +145,34 @@ class HATQuote(Document):
 @frappe.whitelist()
 def get_quote_lines(quote_request: str, distributor: str | None = None) -> list[dict]:
 	"""The request's lines, priced from the distributor's marketplace listings where it has one."""
+	from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import (
+		get_price_tiers,
+		tier_price,
+	)
+
 	frappe.get_doc("HAT Quote Request", quote_request).check_permission("read")
-	prices = {}
+	listings = {}
 	if distributor:
-		prices = dict(
-			frappe.get_all(
+		listings = {
+			listing.item: listing
+			for listing in frappe.get_all(
 				"HAT Listing",
-				filters={"distributor": distributor, "price_type": "Fixed Price"},
-				fields=["item", "price"],
-				as_list=True,
+				filters={
+					"distributor": distributor,
+					"price_type": ("in", ("Fixed Price", "Price on Quantity")),
+				},
+				fields=["name", "item", "price", "price_type"],
 			)
-		)
+		}
+
+	def listed_price(item, qty):
+		listing = listings.get(item) if item else None
+		if not listing:
+			return None
+		if listing.price_type == "Price on Quantity":
+			return tier_price(get_price_tiers(listing), qty) or listing.price
+		return listing.price
+
 	return [
 		{
 			"request_item": row.name,
@@ -165,7 +182,7 @@ def get_quote_lines(quote_request: str, distributor: str | None = None) -> list[
 			"qty": row.qty,
 			"uom": row.uom,
 			"can_supply": 1,
-			"rate": prices.get(row.item) if row.item else None,
+			"rate": listed_price(row.item, row.qty),
 		}
 		for row in frappe.get_all(
 			"HAT Quote Request Item",
