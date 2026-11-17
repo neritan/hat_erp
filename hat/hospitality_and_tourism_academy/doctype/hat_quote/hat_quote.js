@@ -16,9 +16,10 @@ frappe.ui.form.on("HAT Quote", {
 		const status = frm.doc.status;
 
 		if (can_write && status === "Draft") {
+			// Save only unsaved changes first: frm.save() on an unchanged form just shows
+			// "No changes in document" and its promise never settles, so the submit never ran.
 			frm.add_custom_button(__("Submit Quote"), () =>
-				frm
-					.save()
+				(frm.is_dirty() ? frm.save() : Promise.resolve())
 					.then(() => frm.call("submit_quote"))
 					.then(() => frm.reload_doc())
 			);
