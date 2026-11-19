@@ -29,6 +29,6 @@ RUN env/bin/pip install --no-cache-dir -e apps/hat \
     && rm -rf sites/assets \
     && ln -s /home/frappe/frappe-bench/assets sites/assets \
     && bench build --app hat \
-    && test -e /home/frappe/frappe-bench/assets/hat/images/hat_icon.png \
+    && test -e /home/frappe/frappe-bench/assets/hat/images/hatix-app-icon-512.png \
     && grep -q '"hat.bundle.js"' /home/frappe/frappe-bench/assets/assets.json \
     && grep -q '"desk.bundle.js"' /home/frappe/frappe-bench/assets/assets.json

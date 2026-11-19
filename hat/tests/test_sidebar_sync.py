@@ -9,10 +9,10 @@ import frappe
 V17 = (
 	"hospitality_and_tourism_academy",
 	"sidebar",
-	"hospitality_and_tourism_academy",
-	"hospitality_and_tourism_academy.json",
+	"hatix_marketplace",
+	"hatix_marketplace.json",
 )
-V16 = ("workspace_sidebar", "hat.json")
+V16 = ("workspace_sidebar", "hatix.json")
 FIELDS = ("type", "label", "link_type", "link_to", "icon", "child", "indent", "filters")
 
 
@@ -29,17 +29,21 @@ class TestSidebarSync(unittest.TestCase):
 	def test_frappe16_sidebar_matches_frappe17(self):
 		v16, v17 = load(V16), load(V17)
 		self.assertEqual(v16["doctype"], "Workspace Sidebar")
-		self.assertEqual(v16["name"], "HAT", "Frappe 16 picks the sidebar named after the HAT workspace")
+		self.assertEqual(v16["name"], "Hatix", "Frappe 16 picks the sidebar named after the Hatix workspace")
 		self.assertEqual(v16["app"], "hat")
 		self.assertEqual(entries(v16), entries(v17))
 
 	def test_frappe16_header_icon_is_app_logo(self):
 		# Frappe 16 draws the sidebar header from the Desktop Icon named like the sidebar; Frappe 17
 		# uses the app logo. Both must show the same image.
-		icon = load(("desktop_icon", "hat.json"))
-		self.assertEqual(icon["name"], "HAT")
+		icon = load(("desktop_icon", "hatix.json"))
+		self.assertEqual(icon["name"], "Hatix")
 		self.assertEqual(icon["app"], "hat")
-		self.assertEqual(icon["logo_url"], frappe.get_hooks("app_logo_url", app_name="hat")[0])
+		self.assertEqual(icon["parent_icon"], frappe.get_hooks("app_title", app_name="hat")[0])
+		logo = frappe.get_hooks("app_logo_url", app_name="hat")[0]
+		self.assertEqual(icon["logo_url"], logo)
 		self.assertTrue(
-			os.path.exists(os.path.join(frappe.get_app_path("hat"), "public", "images", "hat_icon.png"))
+			os.path.exists(
+				os.path.join(frappe.get_app_path("hat"), "public", logo.removeprefix("/assets/hat/"))
+			)
 		)

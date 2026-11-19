@@ -13,7 +13,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Home",
-   "link_to": "HAT",
+   "link_to": "Hatix",
    "link_type": "Workspace",
    "show_arrow": 0,
    "type": "Link"
@@ -200,18 +200,18 @@
    "icon": "settings",
    "indent": 0,
    "keep_closed": 0,
-   "label": "HAT Settings",
+   "label": "Hatix Settings",
    "link_to": "HAT Settings",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-11-07 08:00:00.000000",
+ "modified": "2026-11-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
- "name": "HAT",
+ "name": "Hatix",
  "owner": "Administrator",
  "standard": 1,
- "title": "HAT"
+ "title": "Hatix"
 }

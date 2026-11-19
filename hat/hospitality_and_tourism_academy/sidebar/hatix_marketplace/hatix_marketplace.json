@@ -16,7 +16,7 @@
    "is_default_module": 0,
    "keep_closed": 0,
    "label": "Home",
-   "link_to": "HAT",
+   "link_to": "Hatix",
    "link_type": "Workspace",
    "open_in_new_tab": 0,
    "show_arrow": 0,
@@ -267,7 +267,7 @@
    "indent": 0,
    "is_default_module": 0,
    "keep_closed": 0,
-   "label": "HAT Settings",
+   "label": "Hatix Settings",
    "link_to": "HAT Settings",
    "link_type": "DocType",
    "open_in_new_tab": 0,
@@ -275,11 +275,11 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-23 12:00:00.000000",
+ "modified": "2026-11-19 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
- "name": "Hospitality and Tourism Academy",
+ "name": "Hatix Marketplace",
  "owner": "Administrator",
  "standard": 1,
- "title": "Hospitality and Tourism Academy"
+ "title": "Hatix Marketplace"
 }

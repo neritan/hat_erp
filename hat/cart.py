@@ -196,7 +196,7 @@ def place_order(
 					reference_doctype="HAT Order Request",
 					reference_name=name,
 				)
-				error = _("Unexpected error; HAT support can see it in the Error Log")
+				error = _("Unexpected error; Hatix support can see it in the Error Log")
 			failed.append(
 				{
 					"order": name,

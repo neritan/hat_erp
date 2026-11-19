@@ -1,11 +1,11 @@
 app_name = "hat"
-app_title = "Hospitality and Tourism Academy"
-app_publisher = "HAT"
-app_description = "The HAT Group is the integrated powerhouse of hospitality, connecting strategy, talent, media, and industry excellence."
+app_title = "Hatix Marketplace"
+app_publisher = "Hatix"
+app_description = "Hatix Marketplace, the B2B marketplace that connects hotels with distributors."
 app_email = "neritan.milaqi@gmail.com"
 app_license = "mit"
-app_logo_url = "/assets/hat/images/hat_icon.png"
-app_home = "/desk/hat"
+app_logo_url = "/assets/hat/images/hatix-app-icon-512.png"
+app_home = "/desk/hatix"
 
 # Send non-GET requests for this app's endpoints as native `application/json`
 # bodies instead of form-encoded, per-key JSON-stringified values.

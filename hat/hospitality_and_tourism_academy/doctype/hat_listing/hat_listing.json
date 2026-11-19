@@ -36,7 +36,7 @@
    "fieldtype": "Link",
    "label": "Product",
    "options": "Item",
-   "description": "The product from the HAT catalogue. Can't find it? Use Create Product.",
+   "description": "The product from the Hatix catalogue. Can't find it? Use Create Product.",
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
@@ -114,7 +114,7 @@
    "label": "Published",
    "default": "1",
    "in_standard_filter": 1,
-   "description": "Visible to hotels. Only distributors verified by HAT can publish."
+   "description": "Visible to hotels. Only distributors verified by Hatix can publish."
   },
   {
    "fieldname": "image",
@@ -210,7 +210,7 @@
  ],
  "image_field": "image",
  "links": [],
- "modified": "2026-11-16 10:00:00.000000",
+ "modified": "2026-11-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
  "name": "HAT Listing",
