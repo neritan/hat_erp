@@ -10,13 +10,13 @@
  "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
- "label": "HAT",
+ "label": "Hatix",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-11-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
- "name": "HAT",
+ "name": "Hatix",
  "number_cards": [
   {
    "label": "Hotels",
@@ -103,6 +103,6 @@
   }
  ],
  "standard": 1,
- "title": "HAT",
+ "title": "Hatix",
  "type": "Workspace"
 }

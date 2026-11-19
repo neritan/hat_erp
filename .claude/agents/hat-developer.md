@@ -23,8 +23,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 
 ## What already exists in the app
 
-- `hat/hooks.py` — branding (`app_logo_url` = `/assets/hat/images/hat_icon.png`), apps-screen
-  tile, `app_home = "/desk/hat"`, `required_apps`, `after_install` and `after_migrate` →
+- `hat/hooks.py` — branding (`app_title` = "Hatix Marketplace", `app_logo_url` =
+  `/assets/hat/images/hatix-app-icon-512.png`), apps-screen tile, `app_home = "/desk/hatix"`, `required_apps`, `after_install` and `after_migrate` →
   `hat.install`.
 - `hat/install.py` — idempotent `setup()` run on install and every migrate: roles (HAT Staff,
   Hotel, Distributor), Customer Group **Hotel** / Supplier Group **Distributor**, `hat_*` custom
@@ -90,19 +90,21 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
   market prices, partnerships, ratings, 5 quote requests with quotes (one awarded), demo logins). Not run on install;
   `bench --site X execute hat.setup.demo.create_demo` / `delete_demo`. Keep it in step with
   DocType changes.
-- Workspace `HAT` (`/desk/hat`) and 5 Number Cards in the module folder.
+- Workspace `Hatix` (`/desk/hatix`) and 5 Number Cards in the module folder.
 - Specs: `docs/specs/connect-mvp.md` and `docs/specs/marketplace.md` describe all of the above.
 - Prices are in **ALL** only (`MARKETPLACE_CURRENCY` in `hat_listing.py`); company currency is ALL.
-- `hat/public/images/` — `hat_logo.png` (white text, dark backgrounds), `hat_logo_dark.png`
-  (green text, light backgrounds), `hat_icon.png` (square mark).
-- `hat/hospitality_and_tourism_academy/sidebar/hospitality_and_tourism_academy/*.json` — the
-  module's `Sidebar` document (Frappe 17 format, synced on migrate): *Hotels* = Customer filtered
+- `hat/public/images/` — Hatix brand: `hatix-logo-horizontal-dark.png` (black, light backgrounds),
+  `hatix-logo-horizontal-white.png` (white, dark backgrounds), `hatix-icon-*.png` (the H mark),
+  `hatix-app-icon-*.png` (app tile), favicons and splash. The product is branded **Hatix**; internal
+  names (app `hat`, `HAT *` doctypes, `HAT Staff`, `HAT-` item codes) stay.
+- `hat/hospitality_and_tourism_academy/sidebar/hatix_marketplace/*.json` — the
+  module's `Sidebar` document, titled **Hatix Marketplace** (its title is the sidebar header) (Frappe 17 format, synced on migrate): *Hotels* = Customer filtered
   by group Hotel, *Distributors* = Supplier filtered by group Distributor.
-- `hat/workspace_sidebar/hat.json` — the same sidebar as a Frappe 16 `Workspace Sidebar` named
-  **HAT** (the dev server runs the official ERPNext v16 image, Frappe 16; it ignores the Frappe 17
+- `hat/workspace_sidebar/hatix.json` — the same sidebar as a Frappe 16 `Workspace Sidebar` named
+  **Hatix** (the dev server runs the official ERPNext v16 image, Frappe 16; it ignores the Frappe 17
   file and Frappe 17 ignores this one). **Change both files together**;
   `hat/tests/test_sidebar_sync.py` fails if their entries differ. Frappe 16 draws the sidebar
-  header from the Desktop Icon `HAT` (`hat/desktop_icon/hat.json`, `logo_url` = the app logo).
+  header from the Desktop Icon `Hatix` (`hat/desktop_icon/hatix.json`, `logo_url` = the app logo).
 - `Dockerfile`: the base image bakes assets into `/home/frappe/frappe-bench/assets` and links
   `sites/assets` to it on start, so HAT is built through that link. Don't build into `sites/assets`
   directly, or `/assets/hat/...` 404s on the server.

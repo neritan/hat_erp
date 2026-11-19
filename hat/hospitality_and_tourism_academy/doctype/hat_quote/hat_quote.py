@@ -68,7 +68,7 @@ class HATQuote(Document):
 				)
 			):
 				frappe.throw(
-					_("{0} does not supply the products in this request, or is not verified by HAT").format(
+					_("{0} does not supply the products in this request, or is not verified by Hatix").format(
 						frappe.bold(self.distributor_name or self.distributor)
 					)
 				)

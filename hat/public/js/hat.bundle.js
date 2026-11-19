@@ -2,8 +2,9 @@ frappe.provide("hat.marketplace");
 
 const LISTING_API = "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing";
 
-// Ask for quantity (and hotel, for HAT staff) and add a listing to the hotel's draft order request
-hat.marketplace.add_to_order = async (listing, hotel) => {
+// Ask for quantity (and hotel, for HAT staff) and add a listing to the hotel's draft order request.
+// `qty` pre-fills the quantity, e.g. from the marketplace's compact list.
+hat.marketplace.add_to_order = async (listing, hotel, qty) => {
 	const { message: price } = await frappe.call(`${LISTING_API}.get_price_for_hotel`, {
 		listing: listing.name,
 		hotel,
@@ -26,7 +27,7 @@ hat.marketplace.add_to_order = async (listing, hotel) => {
 				fieldtype: "Float",
 				label: __("Quantity ({0})", [__(listing.uom)]),
 				reqd: 1,
-				default: listing.minimum_qty || 1,
+				default: qty || listing.minimum_qty || 1,
 				description:
 					listing.minimum_qty > 1 ? __("Minimum order: {0}", [listing.minimum_qty]) : "",
 				onchange: () => {
@@ -41,7 +42,9 @@ hat.marketplace.add_to_order = async (listing, hotel) => {
 				fieldtype: "HTML",
 				options: hat.marketplace.price_html(
 					price,
-					price.tiers && price.tiers.length ? listing.minimum_qty || 1 : undefined,
+					price.tiers && price.tiers.length
+						? qty || listing.minimum_qty || 1
+						: undefined,
 					listing.uom
 				),
 			},

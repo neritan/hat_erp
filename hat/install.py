@@ -4,8 +4,10 @@ from frappe.permissions import add_permission, update_permission_property
 
 from hat.setup.catalogue import CATALOGUE, COUNTIES
 
-LOGO = "/assets/hat/images/hat_logo_dark.png"
-ICON = "/assets/hat/images/hat_icon.png"
+APP_NAME = "Hatix Marketplace"
+LOGO = "/assets/hat/images/hatix-logo-horizontal-dark.png"
+FAVICON = "/assets/hat/images/hatix-favicon-32.png"
+SPLASH = "/assets/hat/images/hatix-splash-icon-512.png"
 
 ROLES = ("HAT Staff", "Hotel", "Distributor")
 
@@ -166,7 +168,7 @@ def get_custom_fields():
 			dict(
 				fieldname="hat_verified",
 				fieldtype="Check",
-				label="Verified by HAT",
+				label="Verified by Hatix",
 				insert_after="hat_distributor_column",
 				in_standard_filter=1,
 				permlevel=1,
@@ -384,14 +386,14 @@ def create_workflows():
 
 
 def set_branding():
-	"""Brand the site with the HAT logo, leaving any value already set alone."""
+	"""Brand the site with the Hatix logo, leaving any value already set alone."""
 	set_if_empty(
 		"Website Settings",
 		{
-			"app_name": "Hospitality and Tourism Academy",
+			"app_name": APP_NAME,
 			"app_logo": LOGO,
-			"favicon": ICON,
-			"splash_image": ICON,
+			"favicon": FAVICON,
+			"splash_image": SPLASH,
 		},
 	)
 	set_if_empty("Navbar Settings", {"app_logo": LOGO})
