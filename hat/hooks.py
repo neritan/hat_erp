@@ -136,6 +136,13 @@ override_doctype_dashboards = {
 	"Item": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_item_dashboard",
 }
 
+# Hotels and distributors only see Hatix in the desk (see hat/navigation.py)
+doc_events = {
+	"User": {
+		"before_validate": "hat.navigation.apply_module_profile",
+	},
+}
+
 # Uploaded files go to S3 object storage when the site has S3 credentials (see hat/storage.py)
 write_file = "hat.storage.write_file"
 delete_file_data_content = "hat.storage.delete_file_data_content"

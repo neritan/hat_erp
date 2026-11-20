@@ -185,3 +185,37 @@ hat.marketplace.request_quotes = (product, hotel) => {
 	});
 	dialog.show();
 };
+
+// Sidebar header: "Hatix" on the first line, "Marketplace" under it. The sidebar is named "Hatix"
+// (in Frappe 17 its name is the shell in desk URLs, /desk/hatix/...), so the second line is set
+// here. Frappe 16 already draws a second line, the app title "Hatix Marketplace", which is
+// replaced; Frappe 17 draws none, so one is added in Frappe's own header-subtitle style.
+if (frappe.ui.SidebarHeader) {
+	const HATIX_SIDEBAR = "Hatix";
+	// Frappe 17 names the sidebar on screen in sidebar_data.name, Frappe 16 in sidebar_title.
+	const is_hatix = (sidebar) =>
+		[sidebar?.sidebar_data?.name, sidebar?.sidebar_title].includes(HATIX_SIDEBAR);
+	const show_marketplace_line = (header) => {
+		const $container = header.wrapper?.find(".title-container");
+		if (!$container?.length) return;
+		$container.find(".hat-header-subtitle").remove();
+		if (!is_hatix(header.sidebar)) return;
+		const $own = $container.find(".header-subtitle");
+		if ($own.length) {
+			$own.text(__("Marketplace"));
+		} else {
+			$("<div class='header-subtitle hat-header-subtitle'></div>")
+				.text(__("Marketplace"))
+				.appendTo($container);
+		}
+	};
+	for (const method of ["make", "refresh"]) {
+		const original = frappe.ui.SidebarHeader.prototype[method];
+		if (!original) continue;
+		frappe.ui.SidebarHeader.prototype[method] = function (...args) {
+			const result = original.apply(this, args);
+			show_marketplace_line(this);
+			return result;
+		};
+	}
+}

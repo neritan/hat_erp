@@ -15,8 +15,10 @@ RENAMES = (
 	("Desktop Icon", "HAT", "Hatix", ("label",)),
 	# The app's own icon is named after app_title.
 	("Desktop Icon", "Hospitality and Tourism Academy", "Hatix Marketplace", ("label",)),
-	# Frappe 17 module sidebar: its title is the sidebar header next to the app logo.
+	# Frappe 17 module sidebar: its title is the sidebar header next to the app logo, and its
+	# name is the shell in desk URLs (/desk/hatix/...), so it is renamed twice on older sites.
 	("Sidebar", "Hospitality and Tourism Academy", "Hatix Marketplace", ("title",)),
+	("Sidebar", "Hatix Marketplace", "Hatix", ("title",)),
 )
 
 

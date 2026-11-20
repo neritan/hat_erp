@@ -9,8 +9,8 @@ import frappe
 V17 = (
 	"hospitality_and_tourism_academy",
 	"sidebar",
-	"hatix_marketplace",
-	"hatix_marketplace.json",
+	"hatix",
+	"hatix.json",
 )
 V16 = ("workspace_sidebar", "hatix.json")
 FIELDS = ("type", "label", "link_type", "link_to", "icon", "child", "indent", "filters")
@@ -32,6 +32,12 @@ class TestSidebarSync(unittest.TestCase):
 		self.assertEqual(v16["name"], "Hatix", "Frappe 16 picks the sidebar named after the Hatix workspace")
 		self.assertEqual(v16["app"], "hat")
 		self.assertEqual(entries(v16), entries(v17))
+
+	def test_frappe17_shell_is_hatix(self):
+		# The sidebar's name is the shell in desk URLs: /desk/hatix/<page>
+		v17 = load(V17)
+		self.assertEqual(v17["name"], "Hatix")
+		self.assertEqual(v17["title"], "Hatix")
 
 	def test_frappe16_header_icon_is_app_logo(self):
 		# Frappe 16 draws the sidebar header from the Desktop Icon named like the sidebar; Frappe 17
