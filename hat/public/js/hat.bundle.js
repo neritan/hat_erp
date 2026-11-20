@@ -185,3 +185,27 @@ hat.marketplace.request_quotes = (product, hotel) => {
 	});
 	dialog.show();
 };
+
+// Frappe 17 sidebar header: "Hatix" on the first line, "Marketplace" under it. The sidebar itself is
+// named "Hatix" because its name is the shell in desk URLs (/desk/hatix/...), so the second line is
+// added here rather than in its title.
+if (frappe.ui.SidebarHeader) {
+	const HATIX_SHELL = "Hatix";
+	const show_marketplace_line = (header) => {
+		const $container = header.wrapper?.find(".title-container");
+		if (!$container?.length) return;
+		$container.find(".hat-header-subtitle").remove();
+		if (header.sidebar?.sidebar_data?.name !== HATIX_SHELL) return;
+		$("<div class='header-subtitle hat-header-subtitle'></div>")
+			.text(__("Marketplace"))
+			.appendTo($container);
+	};
+	for (const method of ["make", "refresh"]) {
+		const original = frappe.ui.SidebarHeader.prototype[method];
+		frappe.ui.SidebarHeader.prototype[method] = function (...args) {
+			const result = original.apply(this, args);
+			show_marketplace_line(this);
+			return result;
+		};
+	}
+}
