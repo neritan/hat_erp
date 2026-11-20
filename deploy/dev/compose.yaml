@@ -18,6 +18,11 @@ x-hat-image: &hat_image
 
 x-backend: &backend
   <<: *hat_image
+  environment:
+    # Uploaded files go to S3 object storage when these are set (hat/storage.py)
+    S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+    S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+    S3_URL: ${S3_URL:-}
   volumes:
     - sites:/home/frappe/frappe-bench/sites
     - logs:/home/frappe/frappe-bench/logs

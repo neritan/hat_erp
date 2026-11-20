@@ -136,6 +136,13 @@ override_doctype_dashboards = {
 	"Item": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_item_dashboard",
 }
 
+# Uploaded files go to S3 object storage when the site has S3 credentials (see hat/storage.py)
+write_file = "hat.storage.write_file"
+delete_file_data_content = "hat.storage.delete_file_data_content"
+override_doctype_class = {
+	"File": "hat.storage.HATFile",
+}
+
 # Uninstallation
 # ------------
 
