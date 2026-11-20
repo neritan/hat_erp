@@ -1,0 +1,25 @@
+#cloud-config
+# First-boot setup for the HAT dev server (Ubuntu 24.04 on Hetzner Cloud).
+# Docker, a `deploy` user (used by GitHub Actions) and /opt/hat-dev.
+package_update: true
+package_upgrade: true
+
+groups:
+  - docker
+
+users:
+  - name: deploy
+    groups: [docker]
+    shell: /bin/bash
+    lock_passwd: true
+
+swap:
+  filename: /swapfile
+  size: 4G
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  # The SSH keys chosen when creating the server (yours + the GitHub deploy key) also log in as deploy.
+  - install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+  - install -m 600 -o deploy -g deploy /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+  - install -d -o deploy -g deploy /opt/hat-dev

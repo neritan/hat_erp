@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, today
+from frappe.utils.html_utils import sanitize_html
 from frappe.utils.nestedset import get_ancestors_of
 
 from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
@@ -26,6 +27,10 @@ class HATListing(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from hat.hospitality_and_tourism_academy.doctype.hat_listing_price_tier.hat_listing_price_tier import (
+			HATListingPriceTier,
+		)
+
 		availability: DF.Literal["Available", "Out of Stock"]
 		currency: DF.Link | None
 		description: DF.TextEditor | None
@@ -39,7 +44,8 @@ class HATListing(Document):
 		lead_time_days: DF.Int
 		minimum_qty: DF.Float
 		price: DF.Currency
-		price_type: DF.Literal["Fixed Price", "Price on Request"]
+		price_tiers: DF.Table[HATListingPriceTier]
+		price_type: DF.Literal["Fixed Price", "Price on Request", "Price on Quantity"]
 		published: DF.Check
 		title: DF.Data
 		uom: DF.Link
@@ -54,6 +60,10 @@ class HATListing(Document):
 			frappe.throw(
 				_("{0} is a category; choose one of its product groups").format(frappe.bold(self.item_group))
 			)
+		if self.price_type == "Price on Quantity":
+			self.validate_price_tiers()
+		else:
+			self.price_tiers = []
 		if self.price_type == "Price on Request":
 			self.price = 0
 		elif flt(self.price) <= 0:
@@ -64,9 +74,29 @@ class HATListing(Document):
 		if self.published and not frappe.db.get_value("Supplier", self.distributor, "hat_verified"):
 			frappe.throw(
 				_(
-					"Only distributors verified by HAT can publish listings. Untick Published to save it, and ask HAT to verify {0}."
+					"Only distributors verified by Hatix can publish listings. Untick Published to save it, and ask Hatix to verify {0}."
 				).format(frappe.bold(self.distributor_name or self.distributor))
 			)
+
+	def validate_price_tiers(self):
+		"""Sort the ranges; the first one sets the listed price and the minimum order."""
+		if not self.price_tiers:
+			frappe.throw(_("Add at least one quantity range with its price"))
+		self.price_tiers.sort(key=lambda row: flt(row.from_qty))
+		seen = set()
+		for idx, row in enumerate(self.price_tiers, start=1):
+			row.idx = idx
+			if flt(row.from_qty) <= 0:
+				frappe.throw(_("Price by Quantity row {0}: From Quantity must be more than 0").format(idx))
+			if flt(row.price) <= 0:
+				frappe.throw(_("Price by Quantity row {0}: enter a price per unit").format(idx))
+			if flt(row.from_qty) in seen:
+				frappe.throw(
+					_("Price by Quantity: two rows start at quantity {0}").format(frappe.bold(row.from_qty))
+				)
+			seen.add(flt(row.from_qty))
+		self.price = self.price_tiers[0].price
+		self.minimum_qty = self.price_tiers[0].from_qty
 
 	def validate_one_offer_per_product(self):
 		other = frappe.db.exists(
@@ -80,16 +110,57 @@ class HATListing(Document):
 			)
 
 
-def get_listing_rate(listing, hotel, on_date=None):
+def get_listing_rate(listing, hotel, on_date=None, qty=None):
 	"""Price per unit for this hotel: the public price less any partnership discount.
 
-	None for listings priced on request."""
+	With Price on Quantity the public price is the one of the range `qty` falls in (the first
+	range when no quantity is given). None for listings priced on request."""
 	if listing.price_type == "Price on Request":
 		return None
+	price = flt(listing.price)
+	if listing.price_type == "Price on Quantity" and qty is not None:
+		price = tier_price(get_price_tiers(listing), qty) or price
+	return price * (100 - get_partner_discount(listing, hotel, on_date)) / 100
+
+
+def get_partner_discount(listing, hotel, on_date=None):
+	"""The hotel's partnership discount % with this distributor, if it covers the listing's category."""
 	partnership = hotel and get_active_partnership(listing.distributor, hotel, on_date or today())
 	if partnership and partnership_covers(partnership.name, listing.item_group):
-		return flt(listing.price) * (100 - flt(partnership.discount_percentage)) / 100
-	return flt(listing.price)
+		return flt(partnership.discount_percentage)
+	return 0
+
+
+def get_price_tiers(listing):
+	"""[(from_qty, price), ...] sorted by quantity, from a listing doc or a listing name/dict."""
+	rows = listing.get("price_tiers") if isinstance(listing, Document) else None
+	if rows is None:
+		rows = frappe.get_all(
+			"HAT Listing Price Tier",
+			filters={"parent": listing.name, "parenttype": "HAT Listing", "parentfield": "price_tiers"},
+			fields=["from_qty", "price"],
+		)
+	return sorted((flt(row.from_qty), flt(row.price)) for row in rows)
+
+
+def tier_price(tiers, qty):
+	"""Price of the range `qty` falls in: the last range starting at or below it (whole quantity)."""
+	price = None
+	for from_qty, tier in tiers:
+		if flt(qty) >= from_qty:
+			price = tier
+	return price if price is not None else (tiers[0][1] if tiers else None)
+
+
+def get_tier_rates(listing, hotel, on_date=None):
+	"""The ranges as the hotel sees them: public price and the hotel's price per range."""
+	if listing.price_type != "Price on Quantity":
+		return []
+	discount = get_partner_discount(listing, hotel, on_date)
+	return [
+		{"from_qty": from_qty, "price": price, "rate": price * (100 - discount) / 100}
+		for from_qty, price in get_price_tiers(listing)
+	]
 
 
 def partnership_covers(partnership, item_group):
@@ -115,18 +186,38 @@ def get_user_hotel(user=None):
 	return hotels[0] if len(hotels) == 1 else None
 
 
+def resolve_hotel(hotel=None):
+	"""The hotel to act for: the user's own, or — for HAT staff only — the one they name.
+
+	Never trust a hotel passed from the client: prices, partner discounts and carts are private."""
+	own = get_user_hotel()
+	if not hotel or hotel == own:
+		return own
+	if not set(frappe.get_roles()) & STAFF_ROLES or not frappe.has_permission("Customer", "read", hotel):
+		frappe.throw(_("You can only act for your own hotel"), frappe.PermissionError)
+	if frappe.db.get_value("Customer", hotel, "customer_group") != "Hotel":
+		frappe.throw(_("{0} is not a hotel").format(frappe.bold(hotel)))
+	return hotel
+
+
 @frappe.whitelist()
 def get_price_for_hotel(listing: str, hotel: str | None = None) -> dict:
 	doc = frappe.get_doc("HAT Listing", listing)
 	doc.check_permission("read")
-	hotel = hotel or get_user_hotel()
-	return {"hotel": hotel, "rate": get_listing_rate(doc, hotel), "public_price": doc.price}
+	hotel = resolve_hotel(hotel)
+	return {
+		"hotel": hotel,
+		"rate": get_listing_rate(doc, hotel),
+		"public_price": doc.price,
+		"price_type": doc.price_type,
+		"tiers": get_tier_rates(doc, hotel),
+	}
 
 
 @frappe.whitelist()
 def get_distributors_for_region(hotel: str | None = None) -> list[str]:
 	"""Distributors that list the hotel's territory in their coverage, or list no coverage at all."""
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	territory = hotel and frappe.db.get_value("Customer", hotel, "territory")
 	if not territory:
 		frappe.throw(_("Set the hotel's Territory to filter by delivery region"))
@@ -216,10 +307,15 @@ def get_marketplace(
 	available_only: bool = False,
 	start: int = 0,
 	page_length: int = 24,
+	distributor: str | None = None,
 ) -> dict:
-	"""Products on the marketplace, each with the offers of every distributor that sells it."""
-	hotel = hotel or get_user_hotel()
+	"""Products on the marketplace, each with the offers of every distributor that sells it.
+
+	`search` matches the product only (name or code); `distributor` keeps that distributor's offers."""
+	hotel = resolve_hotel(hotel)
 	filters = [["published", "=", 1]]
+	if distributor:
+		filters.append(["distributor", "=", distributor])
 	if item_group:
 		filters.append(["item_group", "descendants of (inclusive)", item_group])
 	if frappe.utils.sbool(available_only):
@@ -228,7 +324,7 @@ def get_marketplace(
 		filters.append(["distributor", "in", get_distributors_for_region(hotel) or [""]])
 	or_filters = None
 	if search:
-		or_filters = [[field, "like", f"%{search}%"] for field in ("item_name", "title", "distributor_name")]
+		or_filters = [[field, "like", f"%{search}%"] for field in ("item_name", "item")]
 
 	products = frappe.get_list(
 		"HAT Listing",
@@ -245,29 +341,140 @@ def get_marketplace(
 	if not codes:
 		return {"hotel": hotel, "products": [], "has_more": False}
 
-	offers = {}
-	for offer in frappe.get_list(
-		"HAT Listing", filters=[*filters, ["item", "in", codes]], fields=OFFER_FIELDS, limit_page_length=0
-	):
-		offer.rate = get_listing_rate(offer, hotel)
-		offers.setdefault(offer.item, []).append(offer)
+	offers = get_offers(codes, filters, hotel)
 	items = {
 		item.name: item
 		for item in frappe.get_all(
 			"Item", filters={"name": ("in", codes)}, fields=["name", "item_name", "item_group", "image"]
 		)
 	}
-	result = []
-	for code in codes:
-		product_offers = sorted(
-			offers.get(code, []),
-			key=lambda o: (o.availability != "Available", o.rate is None, o.rate or 0),
-		)
+	result = [{**items[code], "offers": offers.get(code, [])} for code in codes]
+	return {"hotel": hotel, "products": result, "has_more": has_more}
+
+
+def get_offers(codes, filters, hotel):
+	"""The offers the user may see for these products, priced for the hotel: {item: [offer, ...]}.
+
+	Each product's offers come available first, then cheapest; `best_price` marks the cheapest
+	fixed price when several distributors compete."""
+	offers = {}
+	for offer in frappe.get_list(
+		"HAT Listing", filters=[*filters, ["item", "in", codes]], fields=OFFER_FIELDS, limit_page_length=0
+	):
+		offer.rate = get_listing_rate(offer, hotel)
+		offer.tiers = get_tier_rates(offer, hotel)
+		offers.setdefault(offer.item, []).append(offer)
+	for product_offers in offers.values():
+		product_offers.sort(key=lambda o: (o.availability != "Available", o.rate is None, o.rate or 0))
 		fixed = [o.rate for o in product_offers if o.availability == "Available" and o.rate is not None]
 		for offer in product_offers:
 			offer.best_price = len(fixed) > 1 and offer.rate == min(fixed)
-		result.append({**items[code], "offers": product_offers})
-	return {"hotel": hotel, "products": result, "has_more": has_more}
+	return offers
+
+
+RELATED_PRODUCTS = 6
+
+
+@frappe.whitelist()
+def get_product(item: str, hotel: str | None = None) -> dict:
+	"""Everything a hotel needs to choose a product: details, every distributor's offer, those
+	distributors, and other products of the same category.
+
+	Only products with a published listing the user may see are shown, so the page never reveals
+	an item that is not on the marketplace."""
+	hotel = resolve_hotel(hotel)
+	filters = [["published", "=", 1]]
+	offers = get_offers([item], filters, hotel).get(item)
+	if not offers:
+		frappe.throw(_("This product is not on the marketplace"), frappe.DoesNotExistError)
+
+	product = frappe.get_all(
+		"Item",
+		filters={"name": item},
+		fields=["name", "item_name", "item_group", "image", "description", "stock_uom"],
+	)[0]
+	# The description is a Text Editor field; clean it before the page renders it as HTML.
+	product.description = sanitize_html(product.description or "")
+	return {
+		"hotel": hotel,
+		"product": product,
+		"offers": offers,
+		"distributors": get_distributor_cards([o.distributor for o in offers], hotel),
+		"related": get_related_products(product, filters, hotel),
+	}
+
+
+def get_distributor_cards(distributors, hotel):
+	"""What a hotel wants to know about each distributor before ordering."""
+	names = list(dict.fromkeys(distributors))
+	territory = hotel and frappe.db.get_value("Customer", hotel, "territory")
+	coverage = {}
+	for row in frappe.get_all(
+		"HAT Coverage Area",
+		filters={"parenttype": "Supplier", "parent": ("in", names)},
+		fields=["parent", "territory"],
+		order_by="idx asc",
+	):
+		coverage.setdefault(row.parent, []).append(row.territory)
+	suppliers = {
+		s.name: s
+		for s in frappe.get_all(
+			"Supplier",
+			filters={"name": ("in", names)},
+			fields=[
+				"name",
+				"supplier_name",
+				"hat_verified",
+				"hat_average_rating",
+				"hat_minimum_order",
+				"email_id",
+				"mobile_no",
+				"website",
+			],
+		)
+	}
+	cards = []
+	for name in names:
+		card = suppliers[name]
+		card.coverage = coverage.get(name, [])
+		# No coverage listed means the distributor delivers everywhere, as in the region filter.
+		card.delivers_to_hotel = (not card.coverage or territory in card.coverage) if territory else None
+		cards.append(card)
+	return cards
+
+
+def get_related_products(product, filters, hotel):
+	"""Other products of the same category on the marketplace, with their lowest price."""
+	codes = [
+		row.item
+		for row in frappe.get_list(
+			"HAT Listing",
+			filters=[*filters, ["item_group", "=", product.item_group], ["item", "!=", product.name]],
+			fields=["item", "item_name"],
+			distinct=True,
+			order_by="item_name asc",
+			page_length=RELATED_PRODUCTS,
+		)
+	]
+	if not codes:
+		return []
+	offers = get_offers(codes, filters, hotel)
+	items = frappe.get_all(
+		"Item", filters={"name": ("in", codes)}, fields=["name", "item_name", "item_group", "image"]
+	)
+	related = []
+	for item in sorted(items, key=lambda i: i.item_name):
+		item_offers = offers.get(item.name, [])
+		rates = [
+			rate
+			for o in item_offers
+			if o.availability == "Available" and o.rate is not None
+			for rate in ([t["rate"] for t in o.tiers] if o.tiers else [o.rate])
+		]
+		item.lowest_rate = min(rates) if rates else None
+		item.offer_count = len(item_offers)
+		related.append(item)
+	return related
 
 
 @frappe.whitelist(methods=["POST"])
@@ -279,7 +486,7 @@ def add_to_order(listing: str, qty: float, hotel: str | None = None) -> str:
 		frappe.throw(_("{0} is not published").format(frappe.bold(doc.title)))
 	if doc.availability != "Available":
 		frappe.throw(_("{0} is out of stock").format(frappe.bold(doc.title)))
-	hotel = hotel or get_user_hotel()
+	hotel = resolve_hotel(hotel)
 	if not hotel:
 		frappe.throw(_("Select the hotel you are ordering for"))
 
@@ -305,7 +512,7 @@ def add_to_order(listing: str, qty: float, hotel: str | None = None) -> str:
 			"description": doc.title,
 			"qty": flt(qty),
 			"uom": doc.uom,
-			"rate": get_listing_rate(doc, hotel, order.transaction_date),
+			"rate": get_listing_rate(doc, hotel, order.transaction_date, flt(qty)),
 		},
 	)
 	order.save()
@@ -338,5 +545,5 @@ def has_permission(doc, ptype=None, user=None):
 def get_item_dashboard(data):
 	"""Show the distributors' listings of a product on the Item form."""
 	data.setdefault("non_standard_fieldnames", {})["HAT Listing"] = "item"
-	data.setdefault("transactions", []).insert(0, {"label": _("HAT Marketplace"), "items": ["HAT Listing"]})
+	data.setdefault("transactions", []).insert(0, {"label": _("Hatix Marketplace"), "items": ["HAT Listing"]})
 	return data

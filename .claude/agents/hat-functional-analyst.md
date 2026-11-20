@@ -48,6 +48,20 @@ design for it unless HAT asks.
 - **Delivery coverage is optional**: all listings are shown to every hotel; hotel and distributor
   agree delivery between them. Coverage is only a filter / warning, never a block.
 
+### Quote Requests confirmed by HAT (2026-10-09) — the reverse marketplace
+- A **hotel publishes a request** for one or more products/quantities with a deadline; see
+  `docs/specs/quote-requests.md`.
+- Visible to **verified distributors whose categories match**; hotel name, city and stars shown.
+- Quotes are **sealed** (only the hotel and HAT see all of them).
+- The hotel **awards per product line**; each winner gets a normal *HAT Order Request*, so
+  commission and ratings work as for marketplace orders.
+- Open questions: show quotes only after the deadline? email notifications? quote count visible to distributors?
+
+### Hotel cart confirmed by HAT (2026-10-23)
+- The cart is the hotel's Draft order requests (one per distributor), **shared by all users of the hotel**.
+- A distributor's *Minimum Order* only **warns**; **Place Order** sends to all distributors at once (no payment/checkout yet). See
+  `docs/specs/hotel-cart.md`.
+
 ### Revenue
 **Every registered hotel and distributor is a HAT partner**, so every order carries HAT
 commission (decided 2026-10-09). Partnership terms apply when one exists; otherwise the default

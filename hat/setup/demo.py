@@ -13,7 +13,7 @@ import re
 from functools import cache
 
 import frappe
-from frappe.utils import add_days, today
+from frappe.utils import add_days, now_datetime, today
 
 from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import next_item_code
 from hat.setup.catalogue import CATALOGUE, CATEGORY_CODES
@@ -665,6 +665,74 @@ RATINGS = [
 	),
 ]
 
+# Hotels asking distributors for prices: (hotel, title, days until deadline, [(product, qty)], quoting
+# distributors, outcome). Outcome: "Open" (quotes in, waiting for the hotel), "Awarded" (cheapest per
+# line won, orders sent) or "Draft" (not published yet).
+QUOTE_REQUESTS = [
+	(
+		"Grand Hotel Bulevardi",
+		"Pije për sezonin e dimrit",
+		5,
+		[
+			("Birra Tirana 0.33 L shishe kthyese, arkë 24 copë", 40),
+			("Ujë Tepelena 1.5 L, pako 6 copë", 100),
+			("Coca-Cola 0.33 L kanoçe, pako 24 copë", 20),
+			("Kafe espresso kokërr Lavazza Super Crema 1 kg", 10),
+		],
+		["Pije Shqiptare Distribution sh.p.k.", "Bevera Jug sh.p.k.", "Cash & Carry Tirana sh.p.k."],
+		"Open",
+	),
+	(
+		"Grand Hotel Bulevardi",
+		"Tekstile për rinovimin e katit 3",
+		7,
+		[
+			("Çarçaf pambuk percale 200 TC 240 x 290 cm, i bardhë", 60),
+			("Peshqir trupi 70 x 140 cm, 500 g/m²", 80),
+			("Peshqir duarsh 50 x 100 cm, 500 g/m²", 80),
+			("Jastëk mikrofibër hoteli 50 x 80 cm", 40),
+		],
+		["Tekstil Hotel Korça sh.p.k.", "Linen Hotel Durrës sh.p.k."],
+		"Open",
+	),
+	(
+		"Hotel Riviera Vlorë",
+		"Peshk dhe fruta deti për restorantin",
+		3,
+		[
+			("Levrek i kultivuar 400-600 g, kg", 30),
+			("Karkaleca të ngrirë 16/20 me kokë, kg", 15),
+			("Midhje Butrinti, kg", 40),
+		],
+		["Deti Jon Seafood sh.p.k.", "Peshku i Durrësit sh.p.k."],
+		"Open",
+	),
+	(
+		"Resort Gjiri i Lalzit",
+		"Perime dhe bulmet javore",
+		2,
+		[
+			("Domate serre Divjake, kg", 50),
+			("Patate Korçe, thes 25 kg", 10),
+			("Vezë M, kofshë 30 copë", 20),
+			("Qumësht lope 3.5% 1 L, pako 12", 10),
+		],
+		["Agro Freskia sh.p.k.", "Tregu Fresk Tirana sh.p.k."],
+		"Awarded",
+	),
+	(
+		"Grand Hotel Bulevardi",
+		"Pajisje për kuzhinën e re",
+		10,
+		[
+			("Furrë kombi Unox CHEFTOP 7 x GN 1/1, elektrike", 1),
+			("Chafing dish GN 1/1 inox me xhel", 12),
+		],
+		[],
+		"Draft",
+	),
+]
+
 # Logins to try the marketplace as each actor
 USERS = [
 	("demo.hotel@example.com", "Demo", "Hotel", "Hotel", "Customer", "Grand Hotel Bulevardi"),
@@ -699,11 +767,14 @@ def create_demo():
 		create_rating(*spec)
 	for spec in USERS:
 		create_user(*spec)
+	for spec in QUOTE_REQUESTS:
+		create_quote_request(*spec)
 	frappe.db.commit()
 	print(
 		f"HAT demo: {len(DISTRIBUTORS)} distributors, {len(HOTELS)} hotels, "
 		f"{frappe.db.count('Item', {'name': ('like', DEMO_ITEM_PREFIX + '%')})} products, "
-		f"{sum(len(v) for v in listings.values())} listings, {len(PARTNERSHIPS)} partnerships. "
+		f"{sum(len(v) for v in listings.values())} listings, {len(PARTNERSHIPS)} partnerships, "
+		f"{len(QUOTE_REQUESTS)} quote requests. "
 		f"Logins: {', '.join(u[0] for u in USERS)} / {DEMO_PASSWORD}"
 	)
 
@@ -905,6 +976,49 @@ def create_rating(distributor, hotel, rating, quality, delivery, communication, 
 	).insert(ignore_permissions=True)
 
 
+def create_quote_request(hotel, title, days, products, distributors, outcome):
+	"""A hotel's request with the distributors' quotes at their marketplace prices."""
+	from hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request import make_quote
+
+	if frappe.db.exists("HAT Quote Request", {"hotel": hotel, "title": title}):
+		return
+	request = frappe.get_doc(
+		{
+			"doctype": "HAT Quote Request",
+			"hotel": hotel,
+			"title": title,
+			"quote_deadline": add_days(now_datetime(), days),
+			"required_by": add_days(today(), days + 7),
+			"notes": "Dërgesa në hotel, në mëngjes para orës 10:00. Faturë me TVSH.",
+			"items": [
+				{"item": frappe.db.get_value("Item", {"item_name": name}), "qty": qty}
+				for name, qty in products
+			],
+		}
+	).insert(ignore_permissions=True)
+	if outcome == "Draft":
+		return
+	request.publish()
+	for distributor in distributors:
+		quote = frappe.get_doc("HAT Quote", make_quote(request.name, distributor))
+		for row in quote.items:
+			row.can_supply = 1 if row.rate else 0
+		quote.notes = "Çmimet pa TVSH. Transporti falas për porosi mbi 20,000 lekë."
+		quote.save(ignore_permissions=True)
+		quote.submit_quote()
+	if outcome == "Awarded":
+		request.reload()
+		comparison = request.get_comparison()
+		awards = {}
+		for line in comparison["lines"]:
+			offers = [
+				(q.rates[line["name"]], q.name) for q in comparison["quotes"] if q.rates.get(line["name"])
+			]
+			if offers:
+				awards[line["name"]] = min(offers)[1]
+		request.award(awards)
+
+
 def create_user(email, first_name, last_name, role, allow, for_value):
 	if not frappe.db.exists("User", email):
 		frappe.get_doc(
@@ -936,6 +1050,8 @@ def delete_demo():
 		("HAT Distributor Rating", "hotel", hotels),
 		("HAT Order Request", "distributor", distributors),
 		("HAT Order Request", "hotel", hotels),
+		("HAT Quote", "distributor", distributors),
+		("HAT Quote Request", "hotel", hotels),
 		("HAT Partnership", "distributor", distributors),
 		("HAT Listing", "distributor", distributors),
 	):

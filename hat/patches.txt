@@ -1,9 +1,11 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://docs.frappe.io/framework/user/en/database-migrations
+hat.patches.rename_navigation_to_hatix #2026-11-20 hatix shell
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+hat.patches.rebrand_site_to_hatix
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

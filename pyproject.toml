@@ -9,6 +9,8 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=16.0.0" # Installed and managed by bench.
+    # S3 object storage for uploaded files (hat/storage.py)
+    "boto3~=1.44.7",
 ]
 
 [build-system]

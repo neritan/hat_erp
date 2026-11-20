@@ -14,8 +14,8 @@ frappe.ui.form.on("HAT Listing", {
 		if (frm.is_new() || !frm.doc.published) return;
 
 		if (frm.doc.availability === "Available" && hat.marketplace.can_order()) {
-			frm.add_custom_button(__("Add to Order"), () => hat.marketplace.add_to_order(frm.doc));
-			frm.change_custom_button_type(__("Add to Order"), null, "primary");
+			frm.add_custom_button(__("Add to Cart"), () => hat.marketplace.add_to_order(frm.doc));
+			frm.change_custom_button_type(__("Add to Cart"), null, "primary");
 		}
 		frappe
 			.call(
@@ -24,7 +24,10 @@ frappe.ui.form.on("HAT Listing", {
 			)
 			.then(({ message }) => {
 				if (message.hotel) {
-					frm.set_intro(hat.marketplace.price_html(message), "blue");
+					frm.set_intro(
+						hat.marketplace.price_html(message, undefined, frm.doc.uom),
+						"blue"
+					);
 				}
 			});
 	},

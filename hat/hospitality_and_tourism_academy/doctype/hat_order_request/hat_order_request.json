@@ -14,6 +14,8 @@
   "distributor",
   "distributor_name",
   "partnership",
+  "quote_request",
+  "quote",
   "column_break_1",
   "status",
   "transaction_date",
@@ -78,6 +80,22 @@
    "label": "Partnership",
    "options": "HAT Partnership",
    "read_only": 1
+  },
+  {
+   "fieldname": "quote_request",
+   "fieldtype": "Link",
+   "label": "Quote Request",
+   "options": "HAT Quote Request",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "quote",
+   "fieldtype": "Link",
+   "label": "Quote",
+   "options": "HAT Quote",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "column_break_1",
@@ -164,7 +182,7 @@
  ],
  "grid_page_length": 50,
  "links": [],
- "modified": "2026-10-01 20:04:29.709884",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
  "name": "HAT Order Request",

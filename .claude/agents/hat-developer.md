@@ -13,7 +13,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 | | |
 |---|---|
 | Bench | `/workspace/development/frappe-bench` (run `bench` from here) |
-| App | `apps/hat` — Python package `hat`, own git repo, branch `main` |
+| App | `apps/hat` — Python package `hat`, own git repo (`origin` = github.com/neritan/hat_erp) |
+| Branches | **`dev` = development trunk**; feature branches from `dev` (`feat/...`, `fix/...`) and merge back into `dev`; `main` only receives releases from `dev` |
 | Module | `Hospitality and Tourism Academy` → folder `hat/hospitality_and_tourism_academy/` |
 | Site | `mysite.localhost` (developer_mode = 1), served on port 8000 |
 | Frappe | 17.0.0-dev (develop) — newer than most online docs; **read the source** in `apps/frappe` when unsure |
@@ -22,8 +23,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 
 ## What already exists in the app
 
-- `hat/hooks.py` — branding (`app_logo_url` = `/assets/hat/images/hat_icon.png`), apps-screen
-  tile, `app_home = "/desk/hat"`, `required_apps`, `after_install` and `after_migrate` →
+- `hat/hooks.py` — branding (`app_title` = "Hatix Marketplace", `app_logo_url` =
+  `/assets/hat/images/hatix-app-icon-512.png`), apps-screen tile, `app_home = "/desk/hatix"`, `required_apps`, `after_install` and `after_migrate` →
   `hat.install`.
 - `hat/install.py` — idempotent `setup()` run on install and every migrate: roles (HAT Staff,
   Hotel, Distributor), Customer Group **Hotel** / Supplier Group **Distributor**, `hat_*` custom
@@ -55,24 +56,61 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
     no active partnership (`commission_type = "HAT Default"`).
   - `HAT Order Request Item.listing`; `HAT Order Request.validate_listings` (distributor match,
     minimum qty, Order vs RFQ while Draft) and a warning on *Send* for unavailable listings.
+  - **Price on Quantity** (`docs/specs/quantity-pricing.md`): third `price_type` with child table
+    `HAT Listing Price Tier` (`from_qty`, `price`). The whole quantity gets its range's price,
+    partnership discount on top: `get_listing_rate(listing, hotel, on_date, qty)`,
+    `get_tier_rates`, `tier_price`. The first range sets `price` and `minimum_qty`. Draft order
+    requests re-price these lines on save. JS helpers `hat.marketplace.tier_for` / `tier_label` /
+    `tiers_html` in `hat.bundle.js`. Tests: `hat/tests/test_quantity_pricing.py`.
   - Rating changes also update `HAT Listing.distributor_rating`.
   - `hat/public/js/hat.bundle.js` (`app_include_js`) — `hat.marketplace.add_to_order` dialog and
     `price_html`, shared by the listing form and list view (`hat_listing_list.js`). `hat` is an
     eslint global in `.eslintrc`. Run `bench build --app hat` after changing it.
+- **Quote Requests** (`docs/specs/quote-requests.md`): `HAT Quote Request` (+ Item) and
+  `HAT Quote` (+ Item); status changes through whitelisted doc methods (`publish`, `close`,
+  `cancel_request`, `get_comparison`, `award`; quote `submit_quote`, `withdraw`), not a Workflow.
+  `hat_quote_request.py` holds matching (`get_matching_distributors`, `get_distributor_groups`),
+  in-app notifications (Notification Log), `make_quote`, `add_to_quote_request`, the hourly
+  `close_expired_requests`, and permission hooks (distributors: matching published requests or
+  ones they quoted; hotels: never draft quotes). Award fields on request lines are permlevel 1
+  (hotel read, HAT write); `award` saves with `ignore_permissions` after `check_permission`.
+  `HATQuote.sync_lines` always rebuilds quote lines from the request (`get_quote_lines`). Award
+  creates one `HAT Order Request` per winner (Draft → `apply_workflow("Send to Distributor")`)
+  with `quote_request` / `quote` links.
+- **Cart** (`docs/specs/hotel-cart.md`): `hat/cart.py` — the hotel's Draft `HAT Order Request`s
+  are the cart (`get_cart`, `get_cart_count`, `update_line`, `remove_line`, `place_order`; each
+  draft sent under its own savepoint so one failure doesn't block the rest). Desk page `hat-cart`;
+  Marketplace shows *Cart (n)*; JS events `hat:cart-count` / `hat:cart-updated`.
+  `minimum_order_warning` lives in `hat_order_request.py` (warn only).
+- `hat/boot.py` (`boot_session`) — points the ERPNext apps-screen icon to `/desk/home` (ERPNext's
+  `app_home = "/desk"` is the apps screen itself in Frappe 17).
 - `hat/setup/demo.py` — demo data (19 fictional Albanian distributors, 13 hotels, ~200 products
   with generated category icons (Lucide SVGs as public `/files/hat-icon-*.svg`, `NAME_ICONS` / `GROUP_ICONS`),
   as ERPNext Items, ~270 offers incl. competing distributors (`COMPETING_OFFERS`) at Albanian
-  market prices, partnerships, ratings, demo logins). Not run on install;
+  market prices, partnerships, ratings, 5 quote requests with quotes (one awarded), demo logins). Not run on install;
   `bench --site X execute hat.setup.demo.create_demo` / `delete_demo`. Keep it in step with
   DocType changes.
-- Workspace `HAT` (`/desk/hat`) and 5 Number Cards in the module folder.
+- Workspace `Hatix` (`/desk/hatix`) and 5 Number Cards in the module folder.
 - Specs: `docs/specs/connect-mvp.md` and `docs/specs/marketplace.md` describe all of the above.
 - Prices are in **ALL** only (`MARKETPLACE_CURRENCY` in `hat_listing.py`); company currency is ALL.
-- `hat/public/images/` — `hat_logo.png` (white text, dark backgrounds), `hat_logo_dark.png`
-  (green text, light backgrounds), `hat_icon.png` (square mark).
-- `hat/hospitality_and_tourism_academy/sidebar/hospitality_and_tourism_academy/*.json` — the
-  module's `Sidebar` document (Frappe 17 format, synced on migrate): *Hotels* = Customer filtered
+- `hat/public/images/` — Hatix brand: `hatix-logo-horizontal-dark.png` (black, light backgrounds),
+  `hatix-logo-horizontal-white.png` (white, dark backgrounds), `hatix-icon-*.png` (the H mark),
+  `hatix-app-icon-*.png` (app tile), favicons and splash. The product is branded **Hatix**; internal
+  names (app `hat`, `HAT *` doctypes, `HAT Staff`, `HAT-` item codes) stay.
+- `hat/hospitality_and_tourism_academy/sidebar/hatix_marketplace/*.json` — the
+  module's `Sidebar` document, titled **Hatix Marketplace** (its title is the sidebar header) (Frappe 17 format, synced on migrate): *Hotels* = Customer filtered
   by group Hotel, *Distributors* = Supplier filtered by group Distributor.
+- `hat/workspace_sidebar/hatix.json` — the same sidebar as a Frappe 16 `Workspace Sidebar` named
+  **Hatix** (the dev server runs the official ERPNext v16 image, Frappe 16; it ignores the Frappe 17
+  file and Frappe 17 ignores this one). **Change both files together**;
+  `hat/tests/test_sidebar_sync.py` fails if their entries differ. Frappe 16 draws the sidebar
+  header from the Desktop Icon `Hatix` (`hat/desktop_icon/hatix.json`, `logo_url` = the app logo).
+- `Dockerfile`: the base image bakes assets into `/home/frappe/frappe-bench/assets` and links
+  `sites/assets` to it on start, so HAT is built through that link. Don't build into `sites/assets`
+  directly, or `/assets/hat/...` 404s on the server.
+- **Dev server** (Hetzner, `deploy/hetzner/README.md`): every merge to `dev` builds `neritan/hat`
+  (Docker Hub) on frappe/erpnext v16 and deploys it via `.github/workflows/deploy-dev.yml`.
+  Local bench = Frappe 17 develop, server = Frappe 16: check Frappe-version-specific features there.
 
 ## Rules
 
@@ -99,6 +137,13 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
    the source document.
 6. Match the surrounding code style (tabs, ruff config in `pyproject.toml`); keep comments sparse.
 
+7. **Never trust a hotel (or distributor) passed from the client.** Whitelisted methods that take
+   `hotel` must call `resolve_hotel(hotel)` (`hat_listing.py`): own hotel from the User Permission,
+   another hotel only for HAT Staff / System Manager with read access. Prices, partner discounts
+   and carts are private per hotel.
+8. **`frm.call` with an options object needs `doc: frm.doc`** for document methods; without it
+   Frappe looks for a module-level function (bug fixed in the Compare & Award dialog).
+
 ## Process for each feature
 
 1. **Spec** — confirm a spec exists in `docs/specs/<feature>.md` with no blocking open
@@ -109,7 +154,9 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
    JS/CSS/assets changed, then `bench --site mysite.localhost clear-cache`.
 5. **Verify**:
    - `env/bin/python -m py_compile` on changed files; `cd apps/hat && pre-commit run --files <files>` if available.
-   - Tests: add `test_*.py` next to DocTypes / in `hat/tests/`; run
+   - Tests: add `test_*.py` next to DocTypes / in `hat/tests/` (example: `hat/tests/test_cart.py` —
+     builds its own `_Test HAT …` fixtures in `setUpClass`, one savepoint per test, `unittest.mock.patch`
+     to inject failures; never let a test write a real Error Log). Run
      `bench --site mysite.localhost run-tests --app hat` (needs `allow_tests` in site config;
      enable it only with the user's consent).
    - Check data/behaviour with `bench --site mysite.localhost execute <dotted.path>` or
@@ -123,7 +170,8 @@ actors and the product catalogue are owned by the `hat-functional-analyst` agent
 6. **Report** — what changed (files), how it was verified, what was **not** verified (e.g. not
    checked in a browser), and remaining TODOs.
 7. **Commit only when the user asks**, in `apps/hat`, conventional messages
-   (`feat:`, `fix:`, `chore:`).
+   (`feat:`, `fix:`, `chore:`). Work on `dev` or a feature branch from `dev`, never directly on
+   `main`; pull requests target `dev`.
 
 ## Safety
 

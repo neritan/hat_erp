@@ -35,6 +35,8 @@ class HATOrderRequest(Document):
 		items: DF.Table[HATOrderRequestItem]
 		notes: DF.Text | None
 		partnership: DF.Link | None
+		quote: DF.Link | None
+		quote_request: DF.Link | None
 		request_type: DF.Literal["Request for Quotation", "Order"]
 		required_by: DF.Date | None
 		status: DF.Literal[
@@ -57,13 +59,19 @@ class HATOrderRequest(Document):
 			self.validate_rates()
 		if self.status == "Sent" and self.has_value_changed("status"):
 			self.warn_unavailable_listings()
+			warning = minimum_order_warning(self)
+			if warning:
+				frappe.msgprint(warning, indicator="orange", alert=True)
 		if self.is_new() or self.has_value_changed("distributor") or self.has_value_changed("hotel"):
 			self.warn_if_outside_coverage()
 
 	def validate_listings(self):
 		"""Marketplace lines: listing must belong to the distributor and meet its minimum quantity.
 
-		A request made only of listings is an Order, or a Request for Quotation if any is priced on request."""
+		A request made only of listings is an Order, or a Request for Quotation if any is priced on request.
+		Price on Quantity lines are re-priced from their quantity."""
+		from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import get_listing_rate
+
 		price_types = set()
 		for item in self.items:
 			if not item.listing:
@@ -71,9 +79,11 @@ class HATOrderRequest(Document):
 			listing = frappe.db.get_value(
 				"HAT Listing",
 				item.listing,
-				["title", "distributor", "minimum_qty", "price_type"],
+				["name", "title", "distributor", "minimum_qty", "price_type", "price", "item_group"],
 				as_dict=True,
 			)
+			if listing.price_type == "Price on Quantity":
+				item.rate = get_listing_rate(listing, self.hotel, self.transaction_date, flt(item.qty))
 			if listing.distributor != self.distributor:
 				frappe.throw(
 					_("Row {0}: {1} is not a listing of {2}").format(
@@ -151,3 +161,14 @@ class HATOrderRequest(Document):
 				indicator="orange",
 				alert=True,
 			)
+
+
+def minimum_order_warning(order):
+	"""Text when an order is below its distributor's Minimum Order (a warning, never a block)."""
+	minimum = flt(frappe.db.get_value("Supplier", order.distributor, "hat_minimum_order"))
+	if minimum and flt(order.total_amount) < minimum:
+		return _("{0}: {1} is below the minimum order of {2}").format(
+			order.distributor_name or order.distributor,
+			frappe.format(order.total_amount, "Currency"),
+			frappe.format(minimum, "Currency"),
+		)

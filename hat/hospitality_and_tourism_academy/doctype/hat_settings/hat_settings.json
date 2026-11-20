@@ -13,11 +13,11 @@
    "fieldtype": "Percent",
    "label": "Default Commission Rate",
    "default": "0",
-   "description": "HAT commission on order requests that have no active partnership. Every registered hotel and distributor is a HAT partner; set the rate once HAT decides it."
+   "description": "Hatix commission on order requests that have no active partnership. Every registered hotel and distributor is a Hatix partner; set the rate once Hatix decides it."
   }
  ],
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-11-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hospitality and Tourism Academy",
  "name": "HAT Settings",

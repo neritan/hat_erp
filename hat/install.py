@@ -4,8 +4,10 @@ from frappe.permissions import add_permission, update_permission_property
 
 from hat.setup.catalogue import CATALOGUE, COUNTIES
 
-LOGO = "/assets/hat/images/hat_logo_dark.png"
-ICON = "/assets/hat/images/hat_icon.png"
+APP_NAME = "Hatix Marketplace"
+LOGO = "/assets/hat/images/hatix-logo-horizontal-dark.png"
+FAVICON = "/assets/hat/images/hatix-favicon-32.png"
+SPLASH = "/assets/hat/images/hatix-splash-icon-512.png"
 
 ROLES = ("HAT Staff", "Hotel", "Distributor")
 
@@ -13,15 +15,23 @@ ROLES = ("HAT Staff", "Hotel", "Distributor")
 def after_install():
 	set_branding()
 	setup()
+	from hat.navigation import setup as setup_navigation
+
+	setup_navigation()
 
 
 def after_migrate():
 	setup()
+	# After the model sync, so a new site already has its modules and the HAT roles.
+	from hat.navigation import setup as setup_navigation
+
+	setup_navigation()
 
 
 def setup():
 	"""Everything HAT needs on a site. Safe to run repeatedly."""
 	create_roles()
+	ensure_root_groups()
 	create_party_groups()
 	create_custom_fields(get_custom_fields(), update=True)
 	create_item_groups()
@@ -34,6 +44,24 @@ def create_roles():
 	for role in ROLES:
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
+
+
+# Root tree nodes ERPNext normally creates in its setup wizard. HAT builds its groups under
+# them, so make sure they exist even when the wizard hasn't been run yet.
+ROOT_GROUPS = (
+	("Customer Group", "customer_group_name", "All Customer Groups"),
+	("Supplier Group", "supplier_group_name", "All Supplier Groups"),
+	("Item Group", "item_group_name", "All Item Groups"),
+	("Territory", "territory_name", "All Territories"),
+)
+
+
+def ensure_root_groups():
+	for doctype, name_field, name in ROOT_GROUPS:
+		if not frappe.db.exists(doctype, name):
+			frappe.get_doc({"doctype": doctype, name_field: name, "is_group": 1}).insert(
 				ignore_permissions=True
 			)
 
@@ -147,7 +175,7 @@ def get_custom_fields():
 			dict(
 				fieldname="hat_verified",
 				fieldtype="Check",
-				label="Verified by HAT",
+				label="Verified by Hatix",
 				insert_after="hat_distributor_column",
 				in_standard_filter=1,
 				permlevel=1,
@@ -365,14 +393,14 @@ def create_workflows():
 
 
 def set_branding():
-	"""Brand the site with the HAT logo, leaving any value already set alone."""
+	"""Brand the site with the Hatix logo, leaving any value already set alone."""
 	set_if_empty(
 		"Website Settings",
 		{
-			"app_name": "Hospitality and Tourism Academy",
+			"app_name": APP_NAME,
 			"app_logo": LOGO,
-			"favicon": ICON,
-			"splash_image": ICON,
+			"favicon": FAVICON,
+			"splash_image": SPLASH,
 		},
 	)
 	set_if_empty("Navbar Settings", {"app_logo": LOGO})

@@ -1,11 +1,11 @@
 app_name = "hat"
-app_title = "Hospitality and Tourism Academy"
-app_publisher = "HAT"
-app_description = "The HAT Group is the integrated powerhouse of hospitality, connecting strategy, talent, media, and industry excellence."
+app_title = "Hatix Marketplace"
+app_publisher = "Hatix"
+app_description = "Hatix Marketplace, the B2B marketplace that connects hotels with distributors."
 app_email = "neritan.milaqi@gmail.com"
 app_license = "mit"
-app_logo_url = "/assets/hat/images/hat_icon.png"
-app_home = "/desk/hat"
+app_logo_url = "/assets/hat/images/hatix-app-icon-512.png"
+app_home = "/desk/hatix"
 
 # Send non-GET requests for this app's endpoints as native `application/json`
 # bodies instead of form-encoded, per-key JSON-stringified values.
@@ -116,14 +116,38 @@ boot_session = "hat.boot.boot_session"
 
 permission_query_conditions = {
 	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_permission_query_conditions",
+	"HAT Quote Request": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.get_permission_query_conditions",
+	"HAT Quote": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.get_quote_permission_query_conditions",
 }
 
 has_permission = {
 	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.has_permission",
+	"HAT Quote Request": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_permission",
+	"HAT Quote": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_quote_permission",
+}
+
+scheduler_events = {
+	"hourly": [
+		"hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.close_expired_requests"
+	],
 }
 
 override_doctype_dashboards = {
 	"Item": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.get_item_dashboard",
+}
+
+# Hotels and distributors only see Hatix in the desk (see hat/navigation.py)
+doc_events = {
+	"User": {
+		"before_validate": "hat.navigation.apply_module_profile",
+	},
+}
+
+# Uploaded files go to S3 object storage when the site has S3 credentials (see hat/storage.py)
+write_file = "hat.storage.write_file"
+delete_file_data_content = "hat.storage.delete_file_data_content"
+override_doctype_class = {
+	"File": "hat.storage.HATFile",
 }
 
 # Uninstallation
