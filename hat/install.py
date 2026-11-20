@@ -15,10 +15,17 @@ ROLES = ("HAT Staff", "Hotel", "Distributor")
 def after_install():
 	set_branding()
 	setup()
+	from hat.navigation import setup as setup_navigation
+
+	setup_navigation()
 
 
 def after_migrate():
 	setup()
+	# After the model sync, so a new site already has its modules and the HAT roles.
+	from hat.navigation import setup as setup_navigation
+
+	setup_navigation()
 
 
 def setup():
