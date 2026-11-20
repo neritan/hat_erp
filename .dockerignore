@@ -13,3 +13,6 @@ deploy
 *.doc
 Dockerfile
 .dockerignore
+.env
+.env.*
+!.env.example
