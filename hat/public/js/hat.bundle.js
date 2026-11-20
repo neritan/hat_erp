@@ -192,8 +192,9 @@ hat.marketplace.request_quotes = (product, hotel) => {
 // replaced; Frappe 17 draws none, so one is added in Frappe's own header-subtitle style.
 if (frappe.ui.SidebarHeader) {
 	const HATIX_SIDEBAR = "Hatix";
+	// Frappe 17 names the sidebar on screen in sidebar_data.name, Frappe 16 in sidebar_title.
 	const is_hatix = (sidebar) =>
-		(sidebar?.sidebar_data?.name || sidebar?.sidebar_title) === HATIX_SIDEBAR;
+		[sidebar?.sidebar_data?.name, sidebar?.sidebar_title].includes(HATIX_SIDEBAR);
 	const show_marketplace_line = (header) => {
 		const $container = header.wrapper?.find(".title-container");
 		if (!$container?.length) return;
