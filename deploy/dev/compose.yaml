@@ -5,6 +5,9 @@
 #   docker compose up -d --build
 #
 # Open http://<host>:${HTTP_PORT}  (user: Administrator, password: ADMIN_PASSWORD)
+#
+# HTTPS: set COMPOSE_PROFILES=https and PUBLIC_HOST (a domain, or the server's public IP) in .env.
+# Caddy then answers on ports 80 and 443 with a Let's Encrypt certificate and renews it itself.
 
 name: hat-dev
 
@@ -23,6 +26,10 @@ x-backend: &backend
     S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
     S3_SECRET_KEY: ${S3_SECRET_KEY:-}
     S3_URL: ${S3_URL:-}
+    # Gunicorn only believes X-Forwarded-Proto from these addresses. Port 8000 is reachable only
+    # inside this compose network (from nginx), so trusting every caller there is safe, and it lets
+    # Frappe see that a request came in over HTTPS.
+    FORWARDED_ALLOW_IPS: "*"
   volumes:
     - sites:/home/frappe/frappe-bench/sites
     - logs:/home/frappe/frappe-bench/logs
@@ -61,6 +68,7 @@ services:
       SITE_NAME: ${SITE_NAME:-hat.localhost}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+      PUBLIC_HOST: ${PUBLIC_HOST:-}
     entrypoint: ["bash", "-c"]
     command:
       - |
@@ -80,6 +88,10 @@ services:
             --install-app hat \
             --set-default
         fi
+        # Links in emails and other background work use the public HTTPS address.
+        if [ -n "$$PUBLIC_HOST" ]; then
+          bench --site "$$SITE_NAME" set-config host_name "https://$$PUBLIC_HOST"
+        fi
 
   backend:
     <<: *backend
@@ -91,6 +103,8 @@ services:
       BACKEND: backend:8000
       SOCKETIO: websocket:9000
       FRAPPE_SITE_NAME_HEADER: ${SITE_NAME:-hat.localhost}
+      # Pass on Caddy's "this came in over HTTPS" (X-Forwarded-Proto) instead of nginx's own http.
+      TRUST_UPSTREAM_FORWARDED_PROTO: ${TRUST_UPSTREAM_FORWARDED_PROTO:-off}
       UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
       UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
       UPSTREAM_REAL_IP_RECURSIVE: "off"
@@ -118,6 +132,25 @@ services:
     <<: *backend
     command: bench schedule
 
+  # HTTPS in front of nginx (profile "https"). Let's Encrypt gives a bare IP address only short-lived
+  # certificates (about 6 days); Caddy renews them on its own. The challenge comes in on port 80.
+  https:
+    image: caddy:2.11.8
+    restart: unless-stopped
+    profiles: [https]
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+
   db:
     image: mariadb:11.8
     restart: unless-stopped
@@ -144,7 +177,22 @@ services:
     volumes:
       - redis-queue-data:/data
 
+configs:
+  caddyfile:
+    content: |
+      https://${PUBLIC_HOST:-localhost} {
+      	tls {
+      		issuer acme {
+      			profile shortlived
+      		}
+      	}
+      	encode zstd gzip
+      	reverse_proxy frontend:8080
+      }
+
 volumes:
+  caddy-data:
+  caddy-config:
   db-data:
   redis-queue-data:
   sites:

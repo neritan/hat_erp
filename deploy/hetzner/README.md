@@ -42,7 +42,7 @@ one. Step 4 (GitHub) is still needed.
 | Location | Falkenstein (`fsn1`), Nuremberg (`nbg1`) or Helsinki (`hel1`) |
 | Image | Ubuntu 24.04 |
 | SSH keys | **both** keys from step 1 |
-| Firewall | inbound TCP **22** and **8080** from anywhere |
+| Firewall | inbound TCP **22**, **80**, **443** (and **8080** while you still use plain HTTP) from anywhere |
 | Cloud config | contents of [`cloud-init.yaml`](cloud-init.yaml) |
 
 If you pick an Arm server (CAX) instead, change the `build` job in the workflow to
@@ -65,6 +65,8 @@ hcloud ssh-key create --name hat-dev-deploy --public-key-from-file ~/.ssh/hat-de
 hcloud firewall create --name hat-dev
 hcloud firewall add-rule hat-dev --direction in --protocol tcp --port 22   --source-ips 0.0.0.0/0 --source-ips ::/0
 hcloud firewall add-rule hat-dev --direction in --protocol tcp --port 8080 --source-ips 0.0.0.0/0 --source-ips ::/0
+hcloud firewall add-rule hat-dev --direction in --protocol tcp --port 80   --source-ips 0.0.0.0/0 --source-ips ::/0
+hcloud firewall add-rule hat-dev --direction in --protocol tcp --port 443  --source-ips 0.0.0.0/0 --source-ips ::/0
 
 hcloud server create --name hat-dev --type cx32 --image ubuntu-24.04 --location fsn1 \
   --ssh-key me --ssh-key hat-dev-deploy --firewall hat-dev \
@@ -101,12 +103,34 @@ github.com/neritan/hat_erp → Settings → Secrets and variables → Actions �
 
 | Kind | Name | Value |
 |---|---|---|
-| Variable | `DEV_URL` | `http://<server ip>:8080` |
+| Variable | `DEV_URL` | `https://<server ip>` (with HTTPS, see below), else `http://<server ip>:8080` |
 | Variable | `DEPLOY_DIR` | `/opt/hat-dev` (optional; this is the default) |
 | Secret | `DEPLOY_HOST` | server IP |
 | Secret | `DEPLOY_USER` | `deploy` |
 | Secret | `DEPLOY_SSH_KEY` | contents of `~/.ssh/hat-dev-deploy` (the **private** key) |
 | Secret | `DEPLOY_KNOWN_HOSTS` | contents of `hat-dev-known-hosts` |
+
+## HTTPS
+
+`deploy/dev/compose.yaml` has an optional Caddy service (profile `https`) that serves the site on
+port 443 with a Let's Encrypt certificate and redirects port 80 to it. For a server without a
+domain, Let's Encrypt issues certificates for the IP address itself; they last about six days and
+Caddy renews them automatically.
+
+1. Open TCP 80 and 443 in the Hetzner firewall (see the `hcloud` commands above).
+2. Add to `/opt/hat-dev/.env` on the server:
+
+   ```
+   COMPOSE_PROFILES=https
+   PUBLIC_HOST=<server ip or domain>
+   TRUST_UPSTREAM_FORWARDED_PROTO=on
+   ```
+
+3. Set the GitHub variable `DEV_URL` to `https://<server ip or domain>`.
+4. Deploy (merge into `dev` or *Run workflow*). Check the certificate with
+   `docker compose logs https`.
+
+Once HTTPS works, you can remove port 8080 from the firewall.
 
 ## 5. First deploy
 
