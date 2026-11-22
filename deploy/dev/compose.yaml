@@ -180,6 +180,11 @@ services:
 configs:
   caddyfile:
     content: |
+      {
+      	# Browsers send no server name (SNI) when the address is an IP, so name the certificate here
+      	default_sni ${PUBLIC_HOST:-localhost}
+      }
+
       https://${PUBLIC_HOST:-localhost} {
       	tls {
       		issuer acme {
