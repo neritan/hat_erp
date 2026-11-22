@@ -131,3 +131,26 @@ class TestHotelViews(IntegrationTestCase):
 		frappe.set_user(self.hotel_user)
 		self.assertEqual(get_hotel(self.hotel)["hotel"].name, self.hotel)
 		self.assertRaises(frappe.PermissionError, get_hotel, self.other_hotel)
+
+
+class TestVerifiedDistributorSearch(IntegrationTestCase):
+	def test_hotel_can_search_verified_distributors(self):
+		from frappe.desk.search import search_link
+
+		frappe.set_user("Administrator")
+		verified = make_distributor(f"{PREFIX} Search Verified")
+		hidden = make_distributor(f"{PREFIX} Search Unverified")
+		frappe.db.set_value("Supplier", hidden, "hat_verified", 0)
+		hotel_user = make_user(
+			f"{PREFIX.lower().replace(' ', '.')}.search@example.com", "Hotel", make_hotel(f"{PREFIX} Hotel")
+		)
+		frappe.set_user(hotel_user)
+		try:
+			found = search_link(
+				"Supplier",
+				f"{PREFIX} Search",
+				query="hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.verified_distributor_query",
+			)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual([row["value"] for row in found], [verified])
