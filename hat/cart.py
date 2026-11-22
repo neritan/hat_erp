@@ -35,9 +35,21 @@ def get_cart(hotel: str | None = None) -> dict:
 	orders = frappe.get_list(
 		"HAT Order Request",
 		filters={"hotel": hotel, "status": "Draft"},
-		fields=["name", "distributor", "distributor_name", "request_type", "partnership", "total_amount"],
+		fields=["name", "distributor", "distributor_name", "request_type", "total_amount"],
 		order_by="creation asc",
 	)
+	# Hotels may not read the partnership itself (a staff-level field); the cart only says whether
+	# partner prices apply, for orders get_list has already allowed.
+	partnerships = dict(
+		frappe.get_all(
+			"HAT Order Request",
+			filters={"name": ("in", [o.name for o in orders] or [""])},
+			fields=["name", "partnership"],
+			as_list=True,
+		)
+	)
+	for order in orders:
+		order.partnership = partnerships.get(order.name)
 	items = {}
 	for item in frappe.get_all(
 		"HAT Order Request Item",

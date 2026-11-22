@@ -259,6 +259,9 @@ ERPNEXT_PERMISSIONS = {
 		"Distributor": ("read", "write"),
 		"HAT Staff": ("read", "write", "create"),
 	},
+	# The Hotels and Distributors lists are filtered and grouped by these, so the roles must read them
+	"Customer Group": {"Hotel": ("read",), "Distributor": ("read",), "HAT Staff": ("read",)},
+	"Supplier Group": {"Hotel": ("read",), "Distributor": ("read",), "HAT Staff": ("read",)},
 	"Item Group": {"Hotel": ("read",), "Distributor": ("read",), "HAT Staff": ("read",)},
 	"Item": {"Hotel": ("read",), "Distributor": ("read",), "HAT Staff": ("read", "write", "create")},
 	"Territory": {"Hotel": ("read",), "Distributor": ("read",), "HAT Staff": ("read",)},

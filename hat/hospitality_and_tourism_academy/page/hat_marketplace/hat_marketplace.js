@@ -145,7 +145,10 @@ class HATMarketplace {
 			fieldtype: "Link",
 			options: "Supplier",
 			label: __("Distributor"),
-			get_query: () => ({ filters: { supplier_group: "Distributor", hat_verified: 1 } }),
+			// Server-side: hotels may not filter on hat_verified themselves
+			get_query: () => ({
+				query: "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.verified_distributor_query",
+			}),
 			change: refresh,
 		});
 		if (is_staff()) {

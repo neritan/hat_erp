@@ -346,6 +346,9 @@ class HATProductPage {
 						</div>
 						${facts}
 						${contact ? `<div class="hat-pp-contact">${contact}</div>` : ""}
+						<a class="small" href="/desk/hat-distributor/${encodeURIComponent(d.name)}">${__(
+					"About this distributor and reviews"
+				)}</a>
 						<a class="small" href="#" data-distributor-products="${esc(d.name)}">${__(
 					"All products from this distributor"
 				)}</a>

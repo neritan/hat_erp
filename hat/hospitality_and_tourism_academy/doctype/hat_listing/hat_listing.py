@@ -547,3 +547,27 @@ def get_item_dashboard(data):
 	data.setdefault("non_standard_fieldnames", {})["HAT Listing"] = "item"
 	data.setdefault("transactions", []).insert(0, {"label": _("Hatix Marketplace"), "items": ["HAT Listing"]})
 	return data
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def verified_distributor_query(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict | None = None
+) -> list:
+	"""Link search for verified distributors, the ones the marketplace shows.
+
+	Hotels may not read Supplier.hat_verified (only HAT staff set it), so they cannot filter on it
+	from the browser; whether a distributor is verified is public, so the filter is applied here."""
+	if not frappe.has_permission("Supplier", "read"):
+		return []
+	txt = f"%{txt or ''}%"
+	return frappe.get_all(
+		"Supplier",
+		filters={"supplier_group": "Distributor", "hat_verified": 1, "disabled": 0},
+		or_filters=[["name", "like", txt], ["supplier_name", "like", txt]],
+		fields=["name", "supplier_name"],
+		order_by="supplier_name asc",
+		limit_start=start,
+		limit_page_length=page_len,
+		as_list=True,
+	)

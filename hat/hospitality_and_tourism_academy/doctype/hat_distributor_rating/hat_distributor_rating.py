@@ -24,13 +24,36 @@ class HATDistributorRating(Document):
 		order_request: DF.Link | None
 		quality: DF.Rating
 		rating: DF.Rating
+		review_type: DF.Literal["Order", "Overall"]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "HAT Distributor Rating"
 
 	def validate(self):
+		self.review_type = "Order" if self.order_request else "Overall"
 		if self.order_request:
 			self.validate_order_request()
+		else:
+			self.validate_one_overall_review()
+
+	def validate_one_overall_review(self):
+		"""A hotel reviews a distributor overall once; it edits that review rather than adding more."""
+		existing = frappe.db.get_value(
+			"HAT Distributor Rating",
+			{
+				"hotel": self.hotel,
+				"distributor": self.distributor,
+				"order_request": ("is", "not set"),
+				"name": ("!=", self.name),
+			},
+		)
+		if existing:
+			frappe.throw(
+				_("{0} has already reviewed {1}: edit review {2} instead").format(
+					frappe.bold(self.hotel), frappe.bold(self.distributor_name or self.distributor), existing
+				),
+				title=_("Already reviewed"),
+			)
 
 	def validate_order_request(self):
 		order = frappe.db.get_value(

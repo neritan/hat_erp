@@ -219,3 +219,233 @@ if (frappe.ui.SidebarHeader) {
 		};
 	}
 }
+
+// Review dialog: a hotel rates one completed order, or reviews a distributor overall (no order).
+// Opens the hotel's existing review when there is one, so saving edits it instead of adding another.
+frappe.provide("hat.reviews");
+
+hat.reviews.open = async ({ distributor, order_request, hotel, on_saved } = {}) => {
+	const { message: review } = await frappe.call("hat.reviews.get_review", {
+		distributor,
+		order_request: order_request || null,
+		hotel: hotel || null,
+	});
+	const dialog = new frappe.ui.Dialog({
+		title: order_request
+			? __("Rate order {0}", [order_request])
+			: __("Review {0}", [review.distributor_name || review.distributor]),
+		fields: [
+			{
+				fieldname: "rating",
+				fieldtype: "Rating",
+				label: __("Overall"),
+				reqd: 1,
+				default: review.rating || 0,
+			},
+			{ fieldtype: "Section Break" },
+			{
+				fieldname: "quality",
+				fieldtype: "Rating",
+				label: __("Product quality"),
+				default: review.quality || 0,
+			},
+			{ fieldtype: "Column Break" },
+			{
+				fieldname: "delivery",
+				fieldtype: "Rating",
+				label: __("Delivery"),
+				default: review.delivery || 0,
+			},
+			{ fieldtype: "Column Break" },
+			{
+				fieldname: "communication",
+				fieldtype: "Rating",
+				label: __("Communication"),
+				default: review.communication || 0,
+			},
+			{ fieldtype: "Section Break" },
+			{
+				fieldname: "comment",
+				fieldtype: "Small Text",
+				label: __("Comment"),
+				default: review.comment || "",
+			},
+		],
+		primary_action_label: review.name ? __("Update review") : __("Save review"),
+		primary_action: async (values) => {
+			if (!values.rating) {
+				frappe.msgprint(__("Give at least one star"));
+				return;
+			}
+			await frappe.call("hat.reviews.save_review", {
+				...values,
+				distributor: review.distributor,
+				order_request: order_request || null,
+				hotel: review.hotel,
+			});
+			dialog.hide();
+			frappe.show_alert({ message: __("Thank you for your review"), indicator: "green" });
+			on_saved?.();
+		},
+	});
+	dialog.show();
+};
+
+// Completed order requests: the hotel rates the order from the form.
+frappe.ui.form.on("HAT Order Request", {
+	refresh(frm) {
+		if (
+			frm.doc.status !== "Completed" ||
+			frm.is_new() ||
+			!frappe.model.can_create("HAT Distributor Rating")
+		) {
+			return;
+		}
+		frm.add_custom_button(__("Rate this order"), () =>
+			hat.reviews.open({
+				distributor: frm.doc.distributor,
+				order_request: frm.doc.name,
+				hotel: frm.doc.hotel,
+			})
+		);
+	},
+});
+
+// Read-only profile pages: hotels see a distributor (hat-distributor), distributors see a hotel
+// (hat-hotel). Shared pieces and styles, in the look of the product page.
+frappe.provide("hat.profile");
+
+hat.profile.STAFF_ROLES = ["HAT Staff", "System Manager", "Administrator"];
+hat.profile.is_only = (role) =>
+	frappe.user.has_role(role) && !hat.profile.STAFF_ROLES.some((r) => frappe.user.has_role(r));
+
+// A Rating value (0–1) as stars out of 5
+hat.profile.stars = (value, count) => {
+	if (!value) return `<span class="text-muted">${__("No ratings yet")}</span>`;
+	const suffix =
+		count === undefined
+			? ""
+			: ` <span class="text-muted small">(${
+					count === 1 ? __("1 rating") : __("{0} ratings", [count])
+			  })</span>`;
+	return `<span class="hat-profile-stars">★ ${(value * 5).toFixed(1)}</span>${suffix}`;
+};
+
+hat.profile.facts = (rows) =>
+	rows
+		.map(
+			([label, value]) =>
+				`<div class="hat-profile-fact"><span class="text-muted">${label}</span><span>${value}</span></div>`
+		)
+		.join("");
+
+hat.profile.stat = (label, value) =>
+	`<div class="hat-profile-stat"><div class="text-muted small">${label}</div><div class="hat-profile-stat-value">${value}</div></div>`;
+
+hat.profile.contact = (doc) => {
+	const esc = frappe.utils.escape_html;
+	const links = [
+		doc.email_id
+			? `<a href="mailto:${esc(doc.email_id)}">${frappe.utils.icon("mail", "xs")} ${esc(
+					doc.email_id
+			  )}</a>`
+			: "",
+		doc.mobile_no
+			? `<a href="tel:${esc(doc.mobile_no)}">${frappe.utils.icon("phone", "xs")} ${esc(
+					doc.mobile_no
+			  )}</a>`
+			: "",
+		doc.website && /^https?:\/\//i.test(doc.website)
+			? `<a href="${esc(doc.website)}" target="_blank" rel="noopener noreferrer">${esc(
+					doc.website
+			  )}</a>`
+			: "",
+	].filter(Boolean);
+	return links.length ? `<div class="hat-profile-contact">${links.join("")}</div>` : "";
+};
+
+hat.profile.status_color = (status) =>
+	({
+		Completed: "green",
+		Delivered: "green",
+		Accepted: "blue",
+		Sent: "orange",
+		Quoted: "orange",
+		Rejected: "red",
+		Cancelled: "red",
+	}[status] || "gray");
+
+// Hotels open a distributor, and distributors a hotel, as the read-only page instead of the form.
+// The history entry is replaced so Back does not bounce into the form again.
+frappe.router?.on?.("change", () => {
+	const [view, doctype, name] = frappe.get_route();
+	if (view !== "Form" || !name || name.startsWith("new-")) return;
+	let page = null;
+	if (
+		doctype === "Supplier" &&
+		hat.profile.is_only("Hotel") &&
+		!frappe.user.has_role("Distributor")
+	) {
+		page = "hat-distributor";
+	} else if (
+		doctype === "Customer" &&
+		hat.profile.is_only("Distributor") &&
+		!frappe.user.has_role("Hotel")
+	) {
+		page = "hat-hotel";
+	}
+	if (!page) return;
+	frappe.route_flags.replace_route = true;
+	frappe.set_route(page, name);
+});
+
+frappe.dom.set_style(`
+	.hat-profile { padding: var(--padding-md) 0 var(--padding-xl); display: flex; flex-direction: column; gap: var(--margin-lg); }
+	.hat-profile-loading, .hat-profile-empty { padding: var(--padding-lg); }
+	.hat-profile-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-lg); overflow: hidden; }
+	.hat-profile-section h4 { margin-bottom: var(--margin-sm); }
+	.hat-profile-stars { color: var(--yellow-600, #d97706); }
+
+	.hat-profile-head { display: grid; grid-template-columns: 160px minmax(0, 1fr) minmax(240px, 320px); }
+	.hat-profile-logo { background: #fff; display: flex; align-items: center; justify-content: center; padding: var(--padding-md); border-right: 1px solid var(--border-color); color: var(--text-muted); font-size: 2rem; font-weight: 600; min-height: 160px; }
+	.hat-profile-logo img { max-width: 100%; max-height: 140px; object-fit: contain; }
+	.hat-profile-info { padding: var(--padding-lg); display: flex; flex-direction: column; gap: var(--padding-xs); min-width: 0; }
+	.hat-profile-title { margin: 0; font-size: var(--text-2xl); }
+	.hat-profile-pills, .hat-profile-tags { display: flex; flex-wrap: wrap; gap: var(--padding-xs); }
+	.hat-profile-tag { font-size: var(--text-sm); padding: 2px 8px; border-radius: var(--border-radius-full, 999px); background: var(--subtle-fg, var(--gray-100)); }
+	.hat-profile-text { color: var(--text-color); line-height: 1.6; max-width: 70ch; }
+	.hat-profile-address { white-space: pre-line; }
+	.hat-profile-actions { display: flex; flex-wrap: wrap; gap: var(--padding-sm); margin-top: var(--margin-sm); }
+	.hat-profile-side { padding: var(--padding-lg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; gap: var(--padding-xs); }
+	.hat-profile-fact { display: flex; justify-content: space-between; gap: var(--padding-md); font-size: var(--text-sm); }
+	.hat-profile-fact span:last-child { text-align: right; }
+	.hat-profile-contact { display: flex; flex-direction: column; gap: 2px; font-size: var(--text-sm); padding-top: var(--padding-xs); margin-top: var(--padding-xs); border-top: 1px solid var(--border-color); word-break: break-word; }
+
+	.hat-profile-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+	.hat-profile-stat { padding: var(--padding-md); border-right: 1px solid var(--border-color); }
+	.hat-profile-stat:last-child { border-right: 0; }
+	.hat-profile-stat-value { font-size: var(--text-lg); font-weight: 600; color: var(--heading-color); }
+	.hat-profile-rate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--padding-xs); margin-top: var(--margin-sm); }
+
+	.hat-profile-products { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--margin-md); margin-bottom: var(--margin-sm); }
+	.hat-profile-product { padding: var(--padding-sm); display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
+	.hat-profile-product:hover { border-color: var(--gray-400); text-decoration: none; }
+	.hat-profile-product-photo { height: 110px; background: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: var(--margin-xs); color: var(--text-muted); font-weight: 600; }
+	.hat-profile-product-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+	.hat-profile-product-name { font-weight: 600; color: var(--heading-color); line-height: 1.3; }
+
+	.hat-profile-review { padding: var(--padding-md); border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: var(--padding-xs); }
+	.hat-profile-review:last-child { border-bottom: 0; }
+	.hat-profile-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--padding-sm); }
+
+	.hat-profile-table-wrap { overflow-x: auto; margin-top: var(--margin-sm); }
+	.hat-profile-table { margin: 0; min-width: 560px; }
+	.hat-profile-table th { font-weight: 500; color: var(--text-muted); font-size: var(--text-sm); white-space: nowrap; }
+	.hat-profile-table td, .hat-profile-table th { padding: var(--padding-sm) var(--padding-md); vertical-align: middle; }
+
+	@media (max-width: 900px) {
+		.hat-profile-head { grid-template-columns: 1fr; }
+		.hat-profile-logo { border-right: 0; border-bottom: 1px solid var(--border-color); min-height: 120px; }
+		.hat-profile-side { border-left: 0; border-top: 1px solid var(--border-color); }
+	}
+`);
