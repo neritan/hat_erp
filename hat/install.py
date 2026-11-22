@@ -278,10 +278,22 @@ def set_role_permissions():
 				add_permission(doctype, role, 0)
 			for ptype in ptypes:
 				update_permission_property(doctype, role, 0, ptype, 1, validate=False)
-	# Only HAT staff can mark a distributor as verified
-	if not frappe.db.exists("Custom DocPerm", {"parent": "Supplier", "role": "HAT Staff", "permlevel": 1}):
-		add_permission("Supplier", "HAT Staff", 1)
-	update_permission_property("Supplier", "HAT Staff", 1, "write", 1, validate=False)
+	# Only HAT staff can mark a distributor as verified. Everyone may read it: the badge is public on
+	# the marketplace, and Frappe refuses any list, filter or column on a field the user cannot read.
+	for role, ptypes in VERIFIED_FIELD_PERMISSIONS.items():
+		if not frappe.db.exists("Custom DocPerm", {"parent": "Supplier", "role": role, "permlevel": 1}):
+			add_permission("Supplier", role, 1)
+		for ptype in ptypes:
+			update_permission_property("Supplier", role, 1, ptype, 1, validate=False)
+
+
+# Supplier.hat_verified (permission level 1)
+VERIFIED_FIELD_PERMISSIONS = {
+	"HAT Staff": ("read", "write"),
+	"System Manager": ("read", "write"),
+	"Hotel": ("read",),
+	"Distributor": ("read",),
+}
 
 
 WORKFLOWS = {

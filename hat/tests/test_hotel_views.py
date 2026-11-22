@@ -154,3 +154,17 @@ class TestVerifiedDistributorSearch(IntegrationTestCase):
 		finally:
 			frappe.set_user("Administrator")
 		self.assertEqual([row["value"] for row in found], [verified])
+
+	def test_hotel_reads_but_cannot_change_verified(self):
+		"""Lists and filters on Supplier.hat_verified work for hotels; only staff may change it."""
+		dist = make_distributor(f"{PREFIX} Verified Read")
+		hotel_user = make_user(
+			f"{PREFIX.lower().replace(' ', '.')}.verified@example.com", "Hotel", make_hotel(f"{PREFIX} Hotel")
+		)
+		frappe.set_user(hotel_user)
+		try:
+			self.assertIn(dist, frappe.get_list("Supplier", filters={"hat_verified": 1}, pluck="name"))
+			doc = frappe.get_doc("Supplier", dist)
+			self.assertFalse(doc.has_permlevel_access_to("hat_verified", permission_type="write"))
+		finally:
+			frappe.set_user("Administrator")
