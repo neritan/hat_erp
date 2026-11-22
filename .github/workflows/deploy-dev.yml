@@ -96,6 +96,11 @@ jobs:
           docker logout
           if [ "$code" != "0" ]; then echo "create-site failed (exit $code)"; exit 1; fi
           docker compose restart backend queue-short queue-long scheduler websocket
+          # Compose does not recreate a container when only its `configs` content changes, so the
+          # HTTPS proxy is recreated to pick up Caddyfile edits (certificates live in a volume).
+          if docker compose config --services | grep -qx https; then
+            docker compose up -d --force-recreate --no-deps https
+          fi
           docker image prune -f
           }
           EOF
