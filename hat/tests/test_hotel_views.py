@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from hat import cart, reviews
+from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import add_to_order
 from hat.hospitality_and_tourism_academy.page.hat_distributor.hat_distributor import get_distributor
 from hat.hospitality_and_tourism_academy.page.hat_hotel.hat_hotel import get_hotel
 from hat.tests.test_cart import make_distributor, make_hotel, make_listing, make_user
@@ -25,16 +26,13 @@ class TestHotelViews(IntegrationTestCase):
 		cls.dist = make_distributor(f"{PREFIX} Distributor")
 		cls.stranger = make_distributor(f"{PREFIX} Unverified")
 		frappe.db.set_value("Supplier", cls.stranger, "hat_verified", 0)
-		listing = make_listing(cls.dist, f"{PREFIX} Coffee", "Birra", 500)
+		listing = cls.listing = make_listing(cls.dist, f"{PREFIX} Coffee", "Birra", 500)
 		cls.completed = make_order(cls.hotel, cls.dist, listing, 2, "Completed").name
 		cls.sent = make_order(cls.hotel, cls.dist, listing, 2, "Sent").name
 
 		email = PREFIX.lower().replace(" ", ".")
 		cls.hotel_user = make_user(f"{email}.hotel@example.com", "Hotel", cls.hotel)
-		cls.dist_user = make_user(f"{email}.dist@example.com", "Distributor")
-		frappe.get_doc(
-			{"doctype": "User Permission", "user": cls.dist_user, "allow": "Supplier", "for_value": cls.dist}
-		).insert(ignore_permissions=True)
+		cls.dist_user = make_user(f"{email}.dist@example.com", "Distributor", cls.dist)
 
 	def setUp(self):
 		# Each test starts without ratings (the class fixtures are shared)
@@ -98,6 +96,18 @@ class TestHotelViews(IntegrationTestCase):
 		self.assertFalse(frappe.has_permission("HAT Distributor Rating", "create"))
 		self.assertRaises(frappe.PermissionError, reviews.save_review, self.dist, rating=1)
 
+	# Orders: hotels place them, distributors fulfil them
+
+	def test_distributor_cannot_order(self):
+		frappe.set_user(self.dist_user)
+		self.assertFalse(frappe.has_permission("HAT Order Request", "create"))
+		self.assertFalse(frappe.has_permission("HAT Order Request", "delete", self.sent))
+		self.assertRaises(frappe.PermissionError, add_to_order, self.listing, 1, self.hotel)
+
+	def test_distributor_still_fulfils_orders(self):
+		frappe.set_user(self.dist_user)
+		self.assertTrue(frappe.has_permission("HAT Order Request", "write", self.sent))
+
 	# Distributor page (hotels)
 
 	def test_hotel_sees_distributor_page(self):
@@ -123,9 +133,16 @@ class TestHotelViews(IntegrationTestCase):
 		self.assertEqual(data["dealings"]["orders"], 2)
 		self.assertEqual(data["dealings"]["completed"], 1)
 
-	def test_distributor_cannot_see_other_hotels(self):
+	def test_distributor_sees_any_hotel_but_only_its_dealings(self):
 		frappe.set_user(self.dist_user)
-		self.assertRaises(frappe.PermissionError, get_hotel, self.other_hotel)
+		data = get_hotel(self.other_hotel)
+		self.assertEqual(data["hotel"].name, self.other_hotel)
+		self.assertEqual(data["dealings"]["orders"], 0)
+
+	def test_distributor_sees_only_its_own_distributor_page(self):
+		frappe.set_user(self.dist_user)
+		self.assertEqual(get_distributor(self.dist)["distributor"].supplier_name, self.dist)
+		self.assertRaises(frappe.PermissionError, get_distributor, self.stranger)
 
 	def test_hotel_sees_only_its_own_page(self):
 		frappe.set_user(self.hotel_user)

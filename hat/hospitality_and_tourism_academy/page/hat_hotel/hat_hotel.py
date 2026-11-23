@@ -2,8 +2,8 @@
 distributor has done with it. Distributors open this page instead of the Customer form (see
 hat.bundle.js).
 
-Who may open it: HAT staff any hotel, a hotel its own, a distributor a hotel it deals with (an order
-request, quote or partnership between them).
+Who may open it: HAT staff any hotel, a hotel its own, a distributor any hotel. A distributor sees
+only its own dealings with the hotel; other distributors' order requests stay hidden.
 """
 
 import frappe
@@ -64,13 +64,8 @@ def check_access(hotel):
 	if roles & STAFF_ROLES or ("Hotel" in roles and get_user_hotel() == hotel):
 		return None
 	if "Distributor" in roles:
-		distributors = get_user_distributors(frappe.session.user)
-		related = {"hotel": hotel, "distributor": ("in", distributors or [""])}
-		if any(
-			frappe.db.exists(doctype, related)
-			for doctype in ("HAT Order Request", "HAT Quote", "HAT Partnership")
-		):
-			return distributors
+		# Every hotel is open to distributors; the dealings are only their own.
+		return get_user_distributors(frappe.session.user)
 	frappe.throw(_("You cannot see this hotel"), frappe.PermissionError)
 
 

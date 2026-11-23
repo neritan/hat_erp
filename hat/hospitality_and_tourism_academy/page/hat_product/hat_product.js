@@ -157,7 +157,10 @@ class HATProductPage {
 						[esc(best.distributor_name)]
 				  )}</div>`
 				: "";
-		const partner_note = this.hotel
+		// Partnerships are between HAT and distributors: hotels just see their prices
+		const partner_note = hat.profile.is_only("Hotel")
+			? __("Prices for {0}.", [esc(this.hotel)])
+			: this.hotel
 			? __("Prices for {0}. Partner prices are shown where you have a partnership.", [
 					esc(this.hotel),
 			  ])

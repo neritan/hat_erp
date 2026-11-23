@@ -34,6 +34,9 @@ def setup():
 	ensure_root_groups()
 	create_party_groups()
 	create_custom_fields(get_custom_fields(), update=True)
+	from hat.users import backfill as backfill_user_structures
+
+	backfill_user_structures()
 	create_item_groups()
 	create_territories()
 	set_role_permissions()
@@ -140,6 +143,15 @@ def get_custom_fields():
 				precision="6",
 				insert_after="hat_latitude",
 			),
+			# Read-only hotel profile, rendered by hat.bundle.js (hat.profile.render_tab)
+			dict(
+				fieldname="hat_profile_tab",
+				fieldtype="Tab Break",
+				label="Hotel Profile",
+				insert_after="supplier_numbers",
+				depends_on=hotel_only,
+			),
+			dict(fieldname="hat_profile_html", fieldtype="HTML", insert_after="hat_profile_tab"),
 		],
 		"Supplier": [
 			dict(
@@ -195,6 +207,46 @@ def get_custom_fields():
 				insert_after="hat_average_rating",
 				read_only=1,
 				no_copy=1,
+			),
+			# Read-only distributor profile, rendered by hat.bundle.js (hat.profile.render_tab)
+			dict(
+				fieldname="hat_profile_tab",
+				fieldtype="Tab Break",
+				label="Distributor Profile",
+				insert_after="customer_numbers",
+				depends_on=distributor_only,
+			),
+			dict(fieldname="hat_profile_html", fieldtype="HTML", insert_after="hat_profile_tab"),
+		],
+		# The one hotel or distributor a marketplace user belongs to (see hat/users.py). Shown and
+		# required by role through hat.users.needs_structure in hat.bundle.js.
+		"User": [
+			dict(
+				fieldname="hat_structure_section",
+				fieldtype="Section Break",
+				label="Hatix",
+				insert_after="roles",
+				depends_on="eval:hat.users.needs_structure(doc)",
+			),
+			dict(
+				fieldname="hat_hotel",
+				fieldtype="Link",
+				label="Hotel",
+				options="Customer",
+				insert_after="hat_structure_section",
+				depends_on="eval:hat.users.needs_structure(doc, 'Hotel')",
+				mandatory_depends_on="eval:hat.users.needs_structure(doc, 'Hotel')",
+				description="The hotel this user works for. A hotel user belongs to exactly one hotel.",
+			),
+			dict(
+				fieldname="hat_distributor",
+				fieldtype="Link",
+				label="Distributor",
+				options="Supplier",
+				insert_after="hat_hotel",
+				depends_on="eval:hat.users.needs_structure(doc, 'Distributor')",
+				mandatory_depends_on="eval:hat.users.needs_structure(doc, 'Distributor')",
+				description="The distributor this user works for. A distributor user belongs to exactly one distributor.",
 			),
 		],
 	}

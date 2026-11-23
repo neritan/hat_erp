@@ -124,13 +124,18 @@ Caddy renews them automatically.
    COMPOSE_PROFILES=https
    PUBLIC_HOST=<server ip or domain>
    TRUST_UPSTREAM_FORWARDED_PROTO=on
+   HTTP_PORT=127.0.0.1:8081
    ```
+
+   `HTTP_PORT` moves nginx off port 8080, so Caddy can take it and redirect old
+   `http://<server>:8080` links to HTTPS. nginx stays reachable from the server itself on 8081.
 
 3. Set the GitHub variable `DEV_URL` to `https://<server ip or domain>`.
 4. Deploy (merge into `dev` or *Run workflow*). Check the certificate with
    `docker compose logs https`.
 
-Once HTTPS works, you can remove port 8080 from the firewall.
+Keep port 8080 open in the firewall if old `http://<server>:8080` links should keep working:
+they are redirected to HTTPS. Remove it once nobody uses them.
 
 ## 5. First deploy
 

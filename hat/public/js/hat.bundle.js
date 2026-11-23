@@ -311,6 +311,36 @@ frappe.ui.form.on("HAT Order Request", {
 	},
 });
 
+// User form: a hotel or distributor user belongs to one structure, chosen here (see hat/users.py).
+// HAT staff and System Managers work across all of them and get no structure.
+frappe.provide("hat.users");
+
+hat.users.STRUCTURE_ROLES = ["Hotel", "Distributor"];
+hat.users.FULL_DESK_ROLES = ["Administrator", "System Manager", "HAT Staff"];
+
+// Whether `doc` (a User) needs a structure; with `role`, whether it needs that one.
+hat.users.needs_structure = (doc, role) => {
+	const roles = (doc.roles || []).map((r) => r.role);
+	if (roles.some((r) => hat.users.FULL_DESK_ROLES.includes(r))) return false;
+	const held = hat.users.STRUCTURE_ROLES.filter((r) => roles.includes(r));
+	return role ? held.includes(role) : held.length > 0;
+};
+
+frappe.ui.form.on("User", {
+	setup(frm) {
+		frm.set_query("hat_hotel", () => ({ filters: { customer_group: "Hotel" } }));
+		frm.set_query("hat_distributor", () => ({ filters: { supplier_group: "Distributor" } }));
+	},
+	refresh(frm) {
+		// Ticking a role updates doc.roles; show or hide the structure fields right away.
+		$(frm.fields_dict.roles_html?.wrapper)
+			.off("change.hat-structure")
+			.on("change.hat-structure", "input[type=checkbox]", () =>
+				setTimeout(() => frm.layout.refresh_dependency())
+			);
+	},
+});
+
 // Read-only profile pages: hotels see a distributor (hat-distributor), distributors see a hotel
 // (hat-hotel). Shared pieces and styles, in the look of the product page.
 frappe.provide("hat.profile");
@@ -399,8 +429,416 @@ frappe.router?.on?.("change", () => {
 	frappe.set_route(page, name);
 });
 
+// Read-only hotel and distributor views, shared by the hat-hotel / hat-distributor pages and the
+// "Hotel Profile" / "Distributor Profile" tabs of the Customer / Supplier forms.
+hat.profile.HotelView = class HotelView {
+	constructor($body) {
+		this.$body = $body;
+	}
+
+	// Renders the hotel; returns its data, or null when it cannot be shown.
+	async load(name) {
+		this.$body.html(`<div class="text-muted hat-profile-loading">${__("Loading…")}</div>`);
+		try {
+			const { message } = await frappe.call({
+				method: "hat.hospitality_and_tourism_academy.page.hat_hotel.hat_hotel.get_hotel",
+				args: { hotel: name },
+			});
+			this.data = message;
+		} catch {
+			this.$body.html(
+				`<div class="text-muted hat-profile-loading">${__(
+					"This hotel is not available."
+				)}</div>`
+			);
+			return null;
+		}
+		this.$body.html(
+			[this.header_html(), this.dealings_html(), this.quote_requests_html()].join("")
+		);
+		return this.data;
+	}
+
+	header_html() {
+		const esc = frappe.utils.escape_html;
+		const h = this.data.hotel;
+		const logo = h.image
+			? `<img src="${encodeURI(h.image)}" alt="${esc(h.customer_name)}">`
+			: `<span>${esc(frappe.get_abbr(h.customer_name))}</span>`;
+		const stars = h.hat_star_rating ? "★".repeat(parseInt(h.hat_star_rating)) : "";
+		const place = [h.hat_city, h.territory].filter(Boolean).map(esc).join(", ");
+		const map =
+			h.hat_latitude && h.hat_longitude
+				? `<a href="https://www.openstreetmap.org/?mlat=${h.hat_latitude}&mlon=${
+						h.hat_longitude
+				  }#map=16/${h.hat_latitude}/${
+						h.hat_longitude
+				  }" target="_blank" rel="noopener noreferrer">${frappe.utils.icon(
+						"map-pin",
+						"xs"
+				  )} ${__("Show on map")}</a>`
+				: "";
+		const facts = [
+			[__("Property type"), h.hat_hotel_type ? esc(__(h.hat_hotel_type)) : "–"],
+			[__("Stars"), stars ? `<span class="hat-profile-stars">${stars}</span>` : "–"],
+			[__("Rooms"), h.hat_number_of_rooms || "–"],
+			[__("Region"), h.territory ? esc(h.territory) : "–"],
+		];
+		return `
+			<div class="hat-profile-card hat-profile-head">
+				<div class="hat-profile-logo">${logo}</div>
+				<div class="hat-profile-info">
+					<h2 class="hat-profile-title">${esc(h.customer_name)} ${
+			stars ? `<span class="hat-profile-stars">${stars}</span>` : ""
+		}</h2>
+					<div class="text-muted">${place}</div>
+					${
+						h.primary_address
+							? `<div class="hat-profile-text hat-profile-address">${esc(
+									h.primary_address.replace(/<br\s*\/?>/gi, "\n")
+							  )}</div>`
+							: ""
+					}
+					${map ? `<div class="small">${map}</div>` : ""}
+				</div>
+				<div class="hat-profile-side">
+					${hat.profile.facts(facts)}
+					${hat.profile.contact(h)}
+				</div>
+			</div>`;
+	}
+
+	dealings_html() {
+		const esc = frappe.utils.escape_html;
+		const d = this.data.dealings;
+		const rows = d.recent
+			.map(
+				(o) => `
+				<tr>
+					<td><a href="/desk/hat-order-request/${encodeURIComponent(o.name)}">${esc(o.name)}</a></td>
+					<td>${frappe.datetime.str_to_user(o.transaction_date)}</td>
+					<td>${esc(o.distributor_name || "")}</td>
+					<td><span class="indicator-pill ${hat.profile.status_color(o.status)}">${esc(
+					__(o.status)
+				)}</span></td>
+					<td class="text-right">${format_currency(o.total_amount, "ALL", 0)}</td>
+				</tr>`
+			)
+			.join("");
+		return `
+			<div class="hat-profile-section">
+				<h4>${__("Order requests")}</h4>
+				<div class="hat-profile-card hat-profile-stats">
+					${hat.profile.stat(__("Order requests"), d.orders)}
+					${hat.profile.stat(__("Open"), d.open)}
+					${hat.profile.stat(__("Completed"), d.completed)}
+					${hat.profile.stat(__("Ordered"), format_currency(d.ordered, "ALL", 0))}
+					${hat.profile.stat(
+						__("Last request"),
+						d.last_order ? frappe.datetime.str_to_user(d.last_order) : "–"
+					)}
+				</div>
+				${
+					rows
+						? `<div class="hat-profile-card hat-profile-table-wrap">
+							<table class="table hat-profile-table">
+								<thead><tr>
+									<th>${__("Order Request")}</th><th>${__("Date")}</th><th>${__("Distributor")}</th>
+									<th>${__("Status")}</th><th class="text-right">${__("Total")}</th>
+								</tr></thead>
+								<tbody>${rows}</tbody>
+							</table>
+						</div>`
+						: ""
+				}
+			</div>`;
+	}
+
+	quote_requests_html() {
+		const esc = frappe.utils.escape_html;
+		const requests = this.data.open_quote_requests;
+		if (!requests.length) return "";
+		const rows = requests
+			.map(
+				(r) => `
+				<tr>
+					<td><a href="/desk/hat-quote-request/${encodeURIComponent(r.name)}">${esc(
+					r.title || r.name
+				)}</a></td>
+					<td>${r.quote_deadline ? frappe.datetime.str_to_user(r.quote_deadline) : "–"}</td>
+					<td>${r.required_by ? frappe.datetime.str_to_user(r.required_by) : "–"}</td>
+				</tr>`
+			)
+			.join("");
+		return `
+			<div class="hat-profile-section">
+				<h4>${__("Open quote requests")}</h4>
+				<div class="hat-profile-card hat-profile-table-wrap">
+					<table class="table hat-profile-table">
+						<thead><tr><th>${__("Request")}</th><th>${__("Quotes due by")}</th><th>${__(
+			"Needed by"
+		)}</th></tr></thead>
+						<tbody>${rows}</tbody>
+					</table>
+				</div>
+			</div>`;
+	}
+};
+
+hat.profile.DistributorView = class DistributorView {
+	constructor($body) {
+		this.$body = $body;
+		this.$body.on("click", "[data-review]", () =>
+			hat.reviews.open({
+				distributor: this.name,
+				hotel: this.data.hotel,
+				on_saved: () => this.load(this.name),
+			})
+		);
+		this.$body.on("click", "[data-rate-order]", (e) =>
+			hat.reviews.open({
+				distributor: this.name,
+				order_request: $(e.currentTarget).attr("data-rate-order"),
+				hotel: this.data.hotel,
+				on_saved: () => this.load(this.name),
+			})
+		);
+		this.$body.on("click", "[data-products]", (e) => {
+			e.preventDefault();
+			frappe.route_options = { distributor: this.name };
+			frappe.set_route("hat-marketplace");
+		});
+	}
+
+	// Renders the distributor; returns its data, or null when it cannot be shown.
+	async load(name) {
+		this.name = name;
+		this.$body.html(`<div class="text-muted hat-profile-loading">${__("Loading…")}</div>`);
+		try {
+			const { message } = await frappe.call({
+				method: "hat.hospitality_and_tourism_academy.page.hat_distributor.hat_distributor.get_distributor",
+				args: { distributor: name },
+			});
+			this.data = message;
+		} catch {
+			this.$body.html(
+				`<div class="text-muted hat-profile-loading">${__(
+					"This distributor is not available."
+				)} <a href="/desk/hat-marketplace">${__("Back to the Marketplace")}</a></div>`
+			);
+			return null;
+		}
+		this.$body.html(
+			[
+				this.header_html(),
+				this.with_hotel_html(),
+				this.products_html(),
+				this.reviews_html(),
+			].join("")
+		);
+		return this.data;
+	}
+
+	header_html() {
+		const esc = frappe.utils.escape_html;
+		const d = this.data.distributor;
+		const scores = this.data.scores;
+		const logo = d.image
+			? `<img src="${encodeURI(d.image)}" alt="${esc(d.supplier_name)}">`
+			: `<span>${esc(frappe.get_abbr(d.supplier_name))}</span>`;
+		const pills = [
+			d.hat_verified
+				? `<span class="indicator-pill green">${__("Verified by Hatix")}</span>`
+				: "",
+			d.delivers_to_hotel === true
+				? `<span class="indicator-pill green">${__("Delivers to your region")}</span>`
+				: d.delivers_to_hotel === false
+				? `<span class="indicator-pill orange">${__("Not in your region")}</span>`
+				: "",
+		].join(" ");
+		const own_review = this.data.with_hotel?.review;
+		const actions = [
+			`<button class="btn btn-default" data-products>${__("See products")}</button>`,
+			this.data.can_review
+				? `<button class="btn btn-primary" data-review>${
+						own_review ? __("Edit your review") : __("Write a review")
+				  }</button>`
+				: "",
+		].join("");
+		const facts = [
+			[__("Rating"), hat.profile.stars(scores.rating, scores.count)],
+			[
+				__("Delivers to"),
+				d.coverage.length ? d.coverage.map((t) => esc(t)).join(", ") : __("All regions"),
+			],
+			[
+				__("Minimum order value"),
+				d.hat_minimum_order ? format_currency(d.hat_minimum_order, "ALL", 0) : __("None"),
+			],
+			[__("Product quality"), hat.profile.stars(scores.quality)],
+			[__("Delivery"), hat.profile.stars(scores.delivery)],
+			[__("Communication"), hat.profile.stars(scores.communication)],
+		];
+		const contact = hat.profile.contact(d);
+		return `
+			<div class="hat-profile-card hat-profile-head">
+				<div class="hat-profile-logo">${logo}</div>
+				<div class="hat-profile-info">
+					<h2 class="hat-profile-title">${esc(d.supplier_name)}</h2>
+					<div class="hat-profile-pills">${pills}</div>
+					${
+						d.categories.length
+							? `<div class="hat-profile-tags">${d.categories
+									.map((c) => `<span class="hat-profile-tag">${esc(c)}</span>`)
+									.join("")}</div>`
+							: ""
+					}
+					${d.supplier_details ? `<div class="hat-profile-text">${esc(d.supplier_details)}</div>` : ""}
+					<div class="hat-profile-actions">${actions}</div>
+				</div>
+				<div class="hat-profile-side">
+					${hat.profile.facts(facts)}
+					${contact}
+				</div>
+			</div>`;
+	}
+
+	with_hotel_html() {
+		const w = this.data.with_hotel;
+		if (!w) return "";
+		const esc = frappe.utils.escape_html;
+		const to_rate = w.to_rate.length
+			? `<div class="hat-profile-rate">
+				<span class="text-muted small">${__("Completed orders to rate")}:</span>
+				${w.to_rate
+					.map(
+						(o) =>
+							`<button class="btn btn-xs btn-default" data-rate-order="${esc(
+								o
+							)}">★ ${esc(o)}</button>`
+					)
+					.join(" ")}
+			</div>`
+			: "";
+		return `
+			<div class="hat-profile-section">
+				<h4>${__("With your hotel")}</h4>
+				<div class="hat-profile-card hat-profile-stats">
+					${hat.profile.stat(__("Order requests"), w.orders)}
+					${hat.profile.stat(__("Ordered"), format_currency(w.ordered, "ALL", 0))}
+					${hat.profile.stat(
+						__("Last request"),
+						w.last_order ? frappe.datetime.str_to_user(w.last_order) : "–"
+					)}
+					${hat.profile.stat(
+						__("Your review"),
+						w.review ? hat.profile.stars(w.review.rating) : __("Not yet")
+					)}
+				</div>
+				${to_rate}
+			</div>`;
+	}
+
+	products_html() {
+		const esc = frappe.utils.escape_html;
+		const { listings, total } = this.data.products;
+		if (!listings.length) return "";
+		const cards = listings
+			.map((l) => {
+				const image = l.image
+					? `<img src="${encodeURI(l.image)}" alt="" loading="lazy">`
+					: `<span>${esc(frappe.get_abbr(l.title || l.item))}</span>`;
+				const price =
+					l.price_type === "Price on Request" || !l.price
+						? `<span class="text-muted small">${__("Price on request")}</span>`
+						: `<b>${format_currency(
+								l.price,
+								"ALL",
+								0
+						  )}</b> <span class="text-muted small">/ ${esc(__(l.uom || ""))}</span>`;
+				return `
+					<a class="hat-profile-card hat-profile-product" href="/desk/hat-product/${encodeURIComponent(
+						l.item
+					)}">
+						<div class="hat-profile-product-photo">${image}</div>
+						<div class="hat-profile-product-name">${esc(l.title || l.item)}</div>
+						<div class="text-muted small">${esc(l.item_group || "")}</div>
+						<div>${price}</div>
+						${
+							l.availability === "Out of Stock"
+								? `<span class="indicator-pill red">${__("Out of stock")}</span>`
+								: ""
+						}
+					</a>`;
+			})
+			.join("");
+		const more =
+			total > listings.length
+				? `<a href="#" data-products class="small">${__("All {0} products", [total])}</a>`
+				: "";
+		return `
+			<div class="hat-profile-section">
+				<h4>${__("Products")} <span class="text-muted">(${total})</span></h4>
+				<div class="hat-profile-products">${cards}</div>
+				${more}
+			</div>`;
+	}
+
+	reviews_html() {
+		const esc = frappe.utils.escape_html;
+		const reviews = this.data.reviews;
+		const body = reviews.length
+			? reviews
+					.map(
+						(r) => `
+					<div class="hat-profile-review">
+						<div class="hat-profile-review-head">
+							${hat.profile.stars(r.rating)}
+							<b>${esc(r.hotel_name)}</b>
+							<span class="indicator-pill ${r.review_type === "Overall" ? "blue" : "gray"}">${
+							r.review_type === "Overall" ? __("Overall review") : __("Order rating")
+						}</span>
+							<span class="text-muted small">${frappe.datetime.comment_when(r.modified)}</span>
+						</div>
+						${r.comment ? `<div class="hat-profile-text">${esc(r.comment)}</div>` : ""}
+					</div>`
+					)
+					.join("")
+			: `<div class="text-muted hat-profile-empty">${__("No reviews yet.")}</div>`;
+		return `
+			<div class="hat-profile-section">
+				<h4>${__("Reviews from hotels")}</h4>
+				<div class="hat-profile-card">${body}</div>
+			</div>`;
+	}
+};
+
+// Customer (Hotel) and Supplier (Distributor) forms: a read-only profile tab, filled when the form
+// loads. The tab and its HTML field are custom fields (see install.get_custom_fields).
+hat.profile.render_tab = (frm, View) => {
+	const field = frm.get_field("hat_profile_html");
+	if (!field || frm.is_new()) return;
+	const $body = $(`<div class="hat-profile hat-profile-in-form"></div>`);
+	field.$wrapper.empty().append($body);
+	new View($body).load(frm.doc.name);
+};
+
+frappe.ui.form.on("Customer", {
+	refresh(frm) {
+		if (frm.doc.customer_group === "Hotel") hat.profile.render_tab(frm, hat.profile.HotelView);
+	},
+});
+
+frappe.ui.form.on("Supplier", {
+	refresh(frm) {
+		if (frm.doc.supplier_group === "Distributor")
+			hat.profile.render_tab(frm, hat.profile.DistributorView);
+	},
+});
+
 frappe.dom.set_style(`
 	.hat-profile { padding: var(--padding-md) 0 var(--padding-xl); display: flex; flex-direction: column; gap: var(--margin-lg); }
+	.hat-profile-in-form { padding-top: 0; }
 	.hat-profile-loading, .hat-profile-empty { padding: var(--padding-lg); }
 	.hat-profile-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-lg); overflow: hidden; }
 	.hat-profile-section h4 { margin-bottom: var(--margin-sm); }

@@ -35,15 +35,9 @@ class TestReports(IntegrationTestCase):
 		cls.hotel_user = make_user(
 			f"{PREFIX.lower().replace(' ', '.')}.hotel@example.com", "Hotel", cls.hotel_a
 		)
-		cls.dist_user = make_user(f"{PREFIX.lower().replace(' ', '.')}.dist@example.com", "Distributor")
-		frappe.get_doc(
-			{
-				"doctype": "User Permission",
-				"user": cls.dist_user,
-				"allow": "Supplier",
-				"for_value": cls.dist_x,
-			}
-		).insert(ignore_permissions=True)
+		cls.dist_user = make_user(
+			f"{PREFIX.lower().replace(' ', '.')}.dist@example.com", "Distributor", cls.dist_x
+		)
 
 	def tearDown(self):
 		frappe.set_user("Administrator")

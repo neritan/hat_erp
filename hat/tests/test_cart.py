@@ -273,9 +273,13 @@ def make_listing(distributor, product, item_group, price, minimum_qty=1):
 	)
 
 
-def make_user(email, role, hotel=None):
-	if not frappe.db.exists("User", email):
-		frappe.get_doc(
+def make_user(email, role, structure=None):
+	"""A test user; `structure` is the hotel (Hotel role) or distributor (Distributor role) it
+	belongs to. hat.users creates the matching User Permission."""
+	if frappe.db.exists("User", email):
+		user = frappe.get_doc("User", email)
+	else:
+		user = frappe.get_doc(
 			{
 				"doctype": "User",
 				"email": email,
@@ -283,9 +287,10 @@ def make_user(email, role, hotel=None):
 				"send_welcome_email": 0,
 				"roles": [{"role": role}],
 			}
-		).insert(ignore_permissions=True)
-	if hotel:
-		frappe.get_doc(
-			{"doctype": "User Permission", "user": email, "allow": "Customer", "for_value": hotel}
-		).insert(ignore_permissions=True)
+		)
+	field = {"Hotel": "hat_hotel", "Distributor": "hat_distributor"}.get(role)
+	if field:
+		user.set(field, structure)
+	user.flags.ignore_permissions = True
+	user.save()
 	return email

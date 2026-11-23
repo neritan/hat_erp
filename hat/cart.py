@@ -6,6 +6,9 @@ from frappe.model.workflow import apply_workflow
 from frappe.utils import flt
 
 from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import resolve_hotel
+from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
+	hidden_from as partnerships_hidden,
+)
 from hat.hospitality_and_tourism_academy.doctype.hat_order_request.hat_order_request import (
 	minimum_order_warning,
 )
@@ -48,8 +51,10 @@ def get_cart(hotel: str | None = None) -> dict:
 			as_list=True,
 		)
 	)
+	# Partnerships are between HAT and distributors: hotels do not see which orders have one
+	show_partnership = not partnerships_hidden()
 	for order in orders:
-		order.partnership = partnerships.get(order.name)
+		order.partnership = partnerships.get(order.name) if show_partnership else None
 	items = {}
 	for item in frappe.get_all(
 		"HAT Order Request Item",

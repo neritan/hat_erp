@@ -200,8 +200,11 @@ class HATMarketplace {
 		this.product_list.push(...message.products);
 		this.loaded = this.product_list.length;
 		this.render();
+		// Partnerships are between HAT and distributors: hotels just see their prices
 		this.$summary.text(
-			this.hotel
+			hat.profile.is_only("Hotel")
+				? __("Prices for {0}.", [this.hotel])
+				: this.hotel
 				? __("Prices for {0}. Partner prices are shown where you have a partnership.", [
 						this.hotel,
 				  ])

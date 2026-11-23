@@ -10,6 +10,7 @@ from frappe.utils.nestedset import get_ancestors_of
 
 from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
 	get_active_partnership,
+	hidden_from as partnerships_hidden,
 	validate_party_group,
 )
 from hat.setup.catalogue import CATEGORY_CODES
@@ -157,10 +158,15 @@ def get_tier_rates(listing, hotel, on_date=None):
 	if listing.price_type != "Price on Quantity":
 		return []
 	discount = get_partner_discount(listing, hotel, on_date)
-	return [
+	tiers = [
 		{"from_qty": from_qty, "price": price, "rate": price * (100 - discount) / 100}
 		for from_qty, price in get_price_tiers(listing)
 	]
+	if partnerships_hidden():
+		# Hotels see the price they pay, not a public price with a partner discount off it
+		for tier in tiers:
+			tier["price"] = tier["rate"]
+	return tiers
 
 
 def partnership_covers(partnership, item_group):
@@ -205,10 +211,12 @@ def get_price_for_hotel(listing: str, hotel: str | None = None) -> dict:
 	doc = frappe.get_doc("HAT Listing", listing)
 	doc.check_permission("read")
 	hotel = resolve_hotel(hotel)
+	rate = get_listing_rate(doc, hotel)
 	return {
 		"hotel": hotel,
-		"rate": get_listing_rate(doc, hotel),
-		"public_price": doc.price,
+		"rate": rate,
+		# Hotels see the price they pay, not a public price with a partner discount off it
+		"public_price": rate if partnerships_hidden() else doc.price,
 		"price_type": doc.price_type,
 		"tiers": get_tier_rates(doc, hotel),
 	}
@@ -363,6 +371,8 @@ def get_offers(codes, filters, hotel):
 	):
 		offer.rate = get_listing_rate(offer, hotel)
 		offer.tiers = get_tier_rates(offer, hotel)
+		if partnerships_hidden() and offer.rate is not None:
+			offer.price = offer.rate
 		offers.setdefault(offer.item, []).append(offer)
 	for product_offers in offers.values():
 		product_offers.sort(key=lambda o: (o.availability != "Available", o.rate is None, o.rate or 0))
