@@ -9,6 +9,9 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
+	hidden_from as partnerships_hidden,
+)
 from hat.hospitality_and_tourism_academy.report.utils import (
 	LOST_STATUSES,
 	SALE_STATUSES,
@@ -64,7 +67,14 @@ def execute(filters=None):
 			}
 		)
 	data.sort(key=lambda row: row["sales"], reverse=True)
-	return get_columns(), data, None, get_chart(data), get_summary(data)
+	columns, summary = get_columns(), get_summary(data)
+	if partnerships_hidden():
+		# Commission is HAT's agreement with the distributor; hotels do not see it
+		for row in data:
+			row.pop("commission")
+		columns = [c for c in columns if c["fieldname"] != "commission"]
+		summary = [s for s in summary if s["label"] != _("Commission")]
+	return columns, data, None, get_chart(data), summary
 
 
 def get_columns():

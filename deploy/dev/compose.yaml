@@ -7,7 +7,8 @@
 # Open http://<host>:${HTTP_PORT}  (user: Administrator, password: ADMIN_PASSWORD)
 #
 # HTTPS: set COMPOSE_PROFILES=https and PUBLIC_HOST (a domain, or the server's public IP) in .env.
-# Caddy then answers on ports 80 and 443 with a Let's Encrypt certificate and renews it itself.
+# Caddy then answers on ports 80 and 443 with a Let's Encrypt certificate and renews it itself, and
+# redirects http://<host>:8080 to HTTPS. Also set HTTP_PORT=127.0.0.1:8081 so nginx frees port 8080.
 
 name: hat-dev
 
@@ -145,6 +146,9 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+      # Old plain-HTTP links (http://<host>:8080) are redirected to HTTPS. nginx must then give up
+      # this port: set HTTP_PORT=127.0.0.1:8081 in .env (see .env.example).
+      - "${HTTP_REDIRECT_PORT:-8080}:8080"
     volumes:
       - caddy-data:/data
       - caddy-config:/config
@@ -183,6 +187,11 @@ configs:
       {
       	# Browsers send no server name (SNI) when the address is an IP, so name the certificate here
       	default_sni ${PUBLIC_HOST:-localhost}
+      }
+
+      # Plain HTTP on the old port goes to the HTTPS address, keeping the path
+      http://:8080 {
+      	redir https://${PUBLIC_HOST:-localhost}{uri}
       }
 
       https://${PUBLIC_HOST:-localhost} {

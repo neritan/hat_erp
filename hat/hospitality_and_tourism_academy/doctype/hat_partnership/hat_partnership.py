@@ -88,3 +88,27 @@ def get_active_partnership(distributor, hotel, on_date):
 	):
 		if getdate(p.start_date) <= on_date and (not p.end_date or getdate(p.end_date) >= on_date):
 			return p
+
+
+# Hotels and partnerships
+# -----------------------
+# A partnership is an agreement between HAT and a distributor (its commission, and the discount the
+# distributor grants a hotel). Hotels never see it: they get the price they pay, with no public price
+# beside it and no partnership or commission behind it.
+
+PARTNERSHIP_CARDS = ("Active Partnerships", "HAT Commission Earned")
+
+
+def hidden_from(user=None) -> bool:
+	"""Whether partnerships, and the commission and partner discounts that follow from them, are
+	hidden from this user: true for hotel users, false for HAT staff and distributors."""
+	from hat.navigation import is_marketplace_only
+
+	roles = set(frappe.get_roles(user))
+	return "Hotel" in roles and is_marketplace_only(roles)
+
+
+def number_card_permission(doc, ptype=None, user=None, debug=False):
+	"""has_permission hook for Number Card: hotels do not get the partnership and commission cards.
+	A has_permission hook can only refuse, so anything else is allowed (True)."""
+	return not (doc.name in PARTNERSHIP_CARDS and hidden_from(user))

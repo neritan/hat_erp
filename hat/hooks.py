@@ -124,6 +124,7 @@ has_permission = {
 	"HAT Listing": "hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing.has_permission",
 	"HAT Quote Request": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_permission",
 	"HAT Quote": "hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request.has_quote_permission",
+	"Number Card": "hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership.number_card_permission",
 }
 
 scheduler_events = {
@@ -140,6 +141,8 @@ override_doctype_dashboards = {
 doc_events = {
 	"User": {
 		"before_validate": "hat.navigation.apply_module_profile",
+		"validate": "hat.users.validate",
+		"on_update": "hat.users.sync_permission",
 	},
 }
 

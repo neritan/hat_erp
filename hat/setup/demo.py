@@ -1020,8 +1020,14 @@ def create_quote_request(hotel, title, days, products, distributors, outcome):
 
 
 def create_user(email, first_name, last_name, role, allow, for_value):
-	if not frappe.db.exists("User", email):
-		frappe.get_doc(
+	"""A demo login on its hotel or distributor; hat.users keeps its User Permission in step."""
+	field = {"Customer": "hat_hotel", "Supplier": "hat_distributor"}[allow]
+	if frappe.db.exists("User", email):
+		user = frappe.get_doc("User", email)
+		if user.get(field) == for_value:
+			return
+	else:
+		user = frappe.get_doc(
 			{
 				"doctype": "User",
 				"email": email,
@@ -1031,11 +1037,10 @@ def create_user(email, first_name, last_name, role, allow, for_value):
 				"new_password": DEMO_PASSWORD,
 				"roles": [{"role": role}],
 			}
-		).insert(ignore_permissions=True)
-	if not frappe.db.exists("User Permission", {"user": email, "allow": allow, "for_value": for_value}):
-		frappe.get_doc(
-			{"doctype": "User Permission", "user": email, "allow": allow, "for_value": for_value}
-		).insert(ignore_permissions=True)
+		)
+	user.set(field, for_value)
+	user.flags.ignore_permissions = True
+	user.save()
 
 
 def delete_demo():
