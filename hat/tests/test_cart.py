@@ -186,6 +186,17 @@ class TestCart(IntegrationTestCase):
 		result = frappe.call("hat.cart.place_order", orders=json.dumps([only]))
 		self.assertEqual([s["order"] for s in result["sent"]], [only])
 
+	def test_place_order_over_http_with_one_name_or_empty(self):
+		frappe.set_user(self.chef)
+		marketplace.add_to_order(self.beer, 2)
+		marketplace.add_to_order(self.coffee, 2)
+		only = self.part(cart.get_cart(), self.no_minimum)["order"]
+		result = frappe.call("hat.cart.place_order", orders=only)
+		self.assertEqual([s["order"] for s in result["sent"]], [only])
+		# An empty value means the whole cart
+		result = frappe.call("hat.cart.place_order", orders="")
+		self.assertEqual(len(result["sent"]) + len(result["failed"]), 1)
+
 	def test_empty_cart_cannot_be_placed(self):
 		frappe.set_user(self.chef)
 		with self.assertRaises(frappe.ValidationError):
