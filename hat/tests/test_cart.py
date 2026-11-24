@@ -1,6 +1,7 @@
 # Copyright (c) 2026, HAT and Contributors
 # See license.txt
 
+import json
 from unittest.mock import patch
 
 import frappe
@@ -175,6 +176,15 @@ class TestCart(IntegrationTestCase):
 		result = cart.place_order(orders=[only])
 		self.assertEqual([s["order"] for s in result["sent"]], [only])
 		self.assertEqual([p["distributor"] for p in cart.get_cart()["parts"]], [self.with_minimum])
+
+	def test_place_one_distributor_over_http(self):
+		"""The desk and the REST API send `orders` as JSON text."""
+		frappe.set_user(self.chef)
+		marketplace.add_to_order(self.beer, 2)
+		marketplace.add_to_order(self.coffee, 2)
+		only = self.part(cart.get_cart(), self.no_minimum)["order"]
+		result = frappe.call("hat.cart.place_order", orders=json.dumps([only]))
+		self.assertEqual([s["order"] for s in result["sent"]], [only])
 
 	def test_empty_cart_cannot_be_placed(self):
 		frappe.set_user(self.chef)

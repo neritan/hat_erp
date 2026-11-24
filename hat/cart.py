@@ -171,12 +171,16 @@ def remove_line(order: str, line: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def place_order(
 	hotel: str | None = None,
-	orders: list | None = None,
+	orders: list | str | None = None,
 	required_by: str | None = None,
 	delivery_address: str | None = None,
 	notes: str | None = None,
 ) -> dict:
-	"""Send the cart's drafts (or only `orders`) to their distributors, each on its own."""
+	"""Send the cart's drafts (or only `orders`) to their distributors, each on its own.
+
+	Over HTTP `orders` arrives as JSON text, e.g. '["HAT-REQ-2026-00012"]'.
+	"""
+	orders = frappe.parse_json(orders) if isinstance(orders, str) else orders
 	hotel = resolve_cart_hotel(hotel)
 	drafts = get_draft_orders(hotel)
 	selected = [o for o in drafts if not orders or o in orders]
