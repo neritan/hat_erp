@@ -10,7 +10,11 @@ frappe.ui.form.on("HAT Quote Request", {
 	setup(frm) {
 		frm.set_query("hotel", () => ({ filters: { customer_group: "Hotel" } }));
 		frm.set_query("item_group", "items", () => ({ filters: { is_group: 0 } }));
-		frm.set_query("item", "items", () => ({ filters: { disabled: 0, has_variants: 0 } }));
+		// ERPNext's item search shortens the description in the dropdown (the default shows it whole)
+		frm.set_query("item", "items", () => ({
+			query: "erpnext.controllers.queries.item_query",
+			filters: { disabled: 0, has_variants: 0 },
+		}));
 	},
 
 	refresh(frm) {
