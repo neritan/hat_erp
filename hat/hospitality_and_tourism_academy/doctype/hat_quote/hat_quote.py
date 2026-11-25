@@ -11,9 +11,8 @@ from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership
 )
 from hat.hospitality_and_tourism_academy.doctype.hat_quote_request.hat_quote_request import (
 	get_matching_distributors,
-	notify,
-	users_of,
 )
+from hat.notifications import notify, users_of
 
 
 class HATQuote(Document):
