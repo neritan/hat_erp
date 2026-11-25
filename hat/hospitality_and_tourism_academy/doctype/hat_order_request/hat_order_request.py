@@ -10,6 +10,7 @@ from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership
 	get_active_partnership,
 	validate_party_group,
 )
+from hat.notifications import order_status_changed
 
 
 class HATOrderRequest(Document):
@@ -64,6 +65,9 @@ class HATOrderRequest(Document):
 				frappe.msgprint(warning, indicator="orange", alert=True)
 		if self.is_new() or self.has_value_changed("distributor") or self.has_value_changed("hotel"):
 			self.warn_if_outside_coverage()
+
+	def on_update(self):
+		order_status_changed(self)
 
 	def validate_listings(self):
 		"""Marketplace lines: listing must belong to the distributor and meet its minimum quantity.

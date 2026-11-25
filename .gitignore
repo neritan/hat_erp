@@ -54,3 +54,6 @@ jspm_packages/
 
 # Aider AI Chat
 .aider*
+
+# End-to-end agent kit, kept local
+e2e/

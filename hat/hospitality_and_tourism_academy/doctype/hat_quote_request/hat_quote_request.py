@@ -16,6 +16,7 @@ from hat.hospitality_and_tourism_academy.doctype.hat_listing.hat_listing import 
 from hat.hospitality_and_tourism_academy.doctype.hat_partnership.hat_partnership import (
 	validate_party_group,
 )
+from hat.notifications import notify, users_of
 
 LINE_FIELDS = ("item", "item_group", "description", "qty", "uom")
 
@@ -280,31 +281,6 @@ def get_distributor_groups(distributor):
 		groups.add(category)
 		groups.update(get_descendants_of("Item Group", category))
 	return groups
-
-
-def users_of(doctype, names):
-	"""Enabled users linked to these customers / suppliers through User Permissions."""
-	if not names:
-		return []
-	users = frappe.get_all(
-		"User Permission", filters={"allow": doctype, "for_value": ("in", list(names))}, pluck="user"
-	)
-	return frappe.get_all("User", filters={"name": ("in", users or [""]), "enabled": 1}, pluck="name")
-
-
-def notify(users, doc, subject):
-	for user in set(users) - {frappe.session.user}:
-		frappe.get_doc(
-			{
-				"doctype": "Notification Log",
-				"for_user": user,
-				"from_user": frappe.session.user,
-				"type": "Alert",
-				"document_type": doc.doctype,
-				"document_name": doc.name,
-				"subject": subject,
-			}
-		).insert(ignore_permissions=True)
 
 
 def get_user_distributors(user):

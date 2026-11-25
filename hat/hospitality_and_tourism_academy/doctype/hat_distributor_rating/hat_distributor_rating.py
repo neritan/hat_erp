@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from hat.notifications import review_saved
+
 
 class HATDistributorRating(Document):
 	# begin: auto-generated types
@@ -72,6 +74,7 @@ class HATDistributorRating(Document):
 
 	def on_update(self):
 		update_distributor_rating(self.distributor)
+		review_saved(self)
 		if self.has_value_changed("distributor") and self.get_doc_before_save():
 			update_distributor_rating(self.get_doc_before_save().distributor)
 
